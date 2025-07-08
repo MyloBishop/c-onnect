@@ -1,0 +1,9 @@
+# Compiled files and directories
+bin/
+obj/
+
+# VSCode editor configuration
+.vscode/
+
+# macOS specific files
+.DS_Store
