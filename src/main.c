@@ -13,9 +13,6 @@ extern uint64_t g_nodes_searched;
 
 void init_gamestate(GameState* state) {
     memset(state, 0, sizeof(GameState));
-    for (int col = 0; col < WIDTH; ++col) {
-        state->bottom |= (1ULL << (col * PHEIGHT));
-    }
 }
 
 int setup_board(GameState* game, const char* move_string) {
@@ -26,6 +23,7 @@ int setup_board(GameState* game, const char* move_string) {
             fprintf(stderr, "Error: Invalid char '%c' in position '%s'.\n", move_char, move_string);
             return 0;
         }
+        // Moves are 1-indexed in the input string
         int col = (move_char - '0') - 1;
         if (col < 0 || col >= WIDTH) {
             fprintf(stderr, "Error: Invalid column '%c' in position '%s'.\n", move_char, move_string);
@@ -60,7 +58,8 @@ int main(int argc, char *argv[]) {
 
     while (fgets(line, sizeof(line), file)) {
         line_num++;
-        if (line[0] == '\n' || line[0] == '\0') continue;
+        // Skip empty lines
+        if (line[0] == '\n' || line[0] == '\0' || line[0] == '#') continue;
 
         char move_string[MAX_LINE_LEN];
         int expected_score;
@@ -87,6 +86,7 @@ int main(int argc, char *argv[]) {
         if (actual_score != expected_score) {
             fprintf(stderr, "FAIL [Line %d]: Position '%s'\n", line_num, move_string);
             fprintf(stderr, "  -> Expected: %d, Got: %d\n", expected_score, actual_score);
+            print_board(&game);
             fclose(file);
             return 1;
         }
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     long long total_microseconds = (long long)(total_time_sec * 1e6);
 
     // Print raw data: passed_count, total_nodes, total_microseconds
-    fprintf(stdout, "%d %llu %lld", positions_processed, total_nodes, total_microseconds);
+    fprintf(stdout, "%d %llu %lld", positions_processed, (unsigned long long)total_nodes, total_microseconds);
 
     return 0;
 }

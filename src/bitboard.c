@@ -1,94 +1,27 @@
-#include <stdio.h>
 #include "bitboard.h"
+#include <stdio.h>
 
 /*
 Bitboard representation
 Each column has a padding bit so that the bottom mask can quickly check filled positions
 
-.  .  .  .  .  .  .   <- Padding row
+.  .  .  .  .  .  .   <- Padding row (bit 6)
 5 12 19 26 33 40 47
 4 11 18 25 32 39 46
 3 10 17 24 31 38 45
 2  9 16 23 30 37 44
 1  8 15 22 29 36 43
-0  7 14 21 28 35 42 
+0  7 14 21 28 35 42
 */
 
-inline bool is_win(const uint64_t pos) {
-    uint64_t m;
+// Note: Most functions have been moved to bitboard.h as `static inline`
+// to resolve linker errors and improve performance. Only larger, non-inlined
+// functions are left here.
 
-    // Horizontal
-    m = pos & (pos >> PHEIGHT);
-    if (m & (m >> (2 * PHEIGHT))) return true;
-
-    // Vertical
-    m = pos & (pos >> 1);
-    if (m & (m >> 2)) return true;
-
-    // Diagonal (y = x)
-    m = pos & (pos >> (PHEIGHT + 1));
-    if (m & (m >> (2 * (PHEIGHT + 1)))) return true;
-
-    // Diagonal (y = -x)
-    m = pos & (pos >> (PHEIGHT - 1));
-    if (m & (m >> (2 * (PHEIGHT - 1)))) return true;
-
-    return false;
-}
-
-inline bool is_draw(const GameState* state) {
-    return state->moves == HEIGHT * WIDTH;
-}
-
-inline bool can_play(const GameState* state, int col) {
-    uint64_t top_bit_mask = 1ULL << (col * PHEIGHT + HEIGHT);
-    return (state->bottom & top_bit_mask) == 0;
-}
-
-inline int get_legal_moves(const GameState* state, int* move_list) {
-    int i = 0;
-    for (int col = 0; col < WIDTH; col++) {
-        if (can_play(state, col)) {
-            move_list[i] = col;
-            i++;
-        }
-    }
-    return i;
-}
-
-inline void make_move(GameState* const state, int col) {
-    const uint64_t mask = (1ULL << PHEIGHT) - 1;
-    const uint64_t col_mask = mask << (col * PHEIGHT);
-    const uint64_t dropped_location = state->bottom & col_mask;
-
-    state->current_player |= dropped_location;
-    state->filled |= dropped_location;
-    state->bottom ^= dropped_location | (dropped_location << 1);
-
-    state->current_player ^= state->filled; 
-    state->moves++;
-}
-
-inline void undo_move(GameState* const state, int col) {
-    const uint64_t mask = (1ULL << PHEIGHT) - 1;
-    const uint64_t col_mask = mask << (col * PHEIGHT);
-    const uint64_t dropped_location = (state->bottom & col_mask) >> 1;
-
-    state->moves--;
-    state->current_player ^= state->filled;
-
-    state->current_player ^= dropped_location;
-    state->filled ^= dropped_location;
-    state->bottom ^= dropped_location | (dropped_location << 1);
-}
-
-inline bool is_winning_move(GameState* const state, int col) {
-    make_move(state, col);
-    bool win = is_win(state->filled ^ state->current_player);
-    undo_move(state, col);
-    return win;
-}
-
+/**
+ * @brief Prints a raw 64-bit integer as a Connect 4 board for debugging.
+ * @param board The bitboard to print.
+ */
 void print_bitboard(uint64_t board) {
     for (int row = HEIGHT; row >= 0; --row) {
         if (row == HEIGHT) {
@@ -97,10 +30,8 @@ void print_bitboard(uint64_t board) {
             printf(" %d  | ", row);
         }
 
-        // Loop through each column
         for (int col = 0; col < WIDTH; ++col) {
             uint64_t bit_index = col * PHEIGHT + row;
-            
             uint64_t mask = 1ULL << bit_index;
 
             if (board & mask) {
@@ -117,4 +48,48 @@ void print_bitboard(uint64_t board) {
     printf("----+-----------------+\n");
     printf("      0 1 2 3 4 5 6  (Column Index)\n");
     printf("-------------------------\n");
+}
+
+/**
+ * @brief Prints a user-friendly representation of the game state with 'X' and 'O'.
+ * @param state A pointer to the current game state.
+ */
+void print_board(const GameState* state) {
+    printf("Board State (Moves: %d)\n", state->moves);
+    char board[HEIGHT][WIDTH];
+
+    // Initialize board with empty spaces
+    for (int r = 0; r < HEIGHT; ++r) {
+        for (int c = 0; c < WIDTH; ++c) {
+            board[r][c] = '.';
+        }
+    }
+
+    // Determine each player's positions
+    // The player who just moved is in `current_player ^ filled`
+    uint64_t p1_board = state->current_player ^ state->filled;
+    uint64_t p2_board = state->current_player;
+
+    // Populate the char array with 'X' and 'O'
+    for (int c = 0; c < WIDTH; ++c) {
+        for (int r = 0; r < HEIGHT; ++r) {
+            uint64_t mask = 1ULL << (c * PHEIGHT + r);
+            if (p1_board & mask) {
+                board[r][c] = 'X';
+            } else if (p2_board & mask) {
+                board[r][c] = 'O';
+            }
+        }
+    }
+
+    // Print the board from top to bottom
+    for (int r = HEIGHT - 1; r >= 0; --r) {
+        printf("| ");
+        for (int c = 0; c < WIDTH; ++c) {
+            printf("%c ", board[r][c]);
+        }
+        printf("|\n");
+    }
+    printf("+---------------+\n");
+    printf("  1 2 3 4 5 6 7\n\n");
 }

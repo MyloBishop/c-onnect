@@ -2,7 +2,9 @@ CC = gcc
 LDFLAGS = -lm
 
 COMMON_FLAGS = -Iinclude -Wall -Wextra -Wshadow -Wformat=2
+
 RELEASE_CFLAGS = -O3 -march=native -DNDEBUG
+
 DEBUG_CFLAGS = -g -Werror -Wpedantic -gdwarf-4
 
 CFLAGS = $(COMMON_FLAGS) $(RELEASE_CFLAGS)
@@ -31,10 +33,10 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	mkdir -p $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-test: $(EXEC)
+test: clean $(EXEC)
 	python3 $(TESTDIR)/benchmark.py $(EXEC)
 
-bench: $(EXEC)
+bench: clean $(EXEC)
 	python3 $(TESTDIR)/benchmark.py $(EXEC)
 
 clean:
