@@ -2,6 +2,8 @@ import sys
 import subprocess
 from pathlib import Path
 
+TIMOUT = 1000 # 1s per test case
+
 # ANSI colors for formatted output.
 class colors:
     HEADER = '\033[95m'
@@ -41,7 +43,7 @@ def run_all_tests(executable_path):
         try:
             result = subprocess.run(
                 [executable_path, str(test_file_path)],
-                capture_output=True, text=True, timeout=300, check=True
+                capture_output=True, text=True, timeout=TIMOUT, check=True
             )
 
             passed, nodes, time_us = map(int, result.stdout.strip().split())
@@ -63,7 +65,7 @@ def run_all_tests(executable_path):
                 print(f"  {colors.OKGREEN}-> PASS{colors.ENDC} (0 test cases in file)")
 
         except subprocess.TimeoutExpired:
-            print(f"  {colors.FAIL}-> TIMEOUT{colors.ENDC} (Exceeded 300s)")
+            print(f"  {colors.FAIL}-> TIMEOUT{colors.ENDC} (Exceeded {str(TIMEOUT)})")
             print(f"\n{colors.FAIL}--- Halting due to failure in suite: {test_file_name}. ---{colors.ENDC}")
             return
         except subprocess.CalledProcessError as e:

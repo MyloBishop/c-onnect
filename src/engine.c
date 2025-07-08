@@ -1,9 +1,32 @@
 #include "engine.h"
 #include "bitboard.h"
-#include <stdio.h> // Required for printf
+#include <assert.h>
 
 // Global variable to count the number of nodes searched.
 u_int64_t g_nodes_searched = 0;
+int g_move_order[WIDTH];
+
+void fill_move_order(int* arr) {
+    assert(arr != NULL);
+
+    int center = (WIDTH - 1) / 2;
+    arr[0] = center;
+    int count = 1;
+
+    for (int i = 1; count < WIDTH; ++i) {
+        int left = center - i;
+        if (left >= 0) {
+            arr[count++] = left;
+        }
+
+        if (count >= WIDTH) break;
+
+        int right = center + i;
+        if (right < WIDTH) {
+            arr[count++] = right;
+        }
+    }
+}
 
 int negamax(GameState* const state, int alpha, int beta) {
     g_nodes_searched++; // Increment node count on every entry
@@ -28,7 +51,9 @@ int negamax(GameState* const state, int alpha, int beta) {
     }
 
     // Iterate through child nodes
-    for (int col = 0; col < WIDTH; col++) {
+    for (int i = 0; i < WIDTH; i++) {
+        int col = g_move_order[i];
+
         if (!can_play(state, col)) {continue;}
 
         // Make a move on a copy of the state to avoid undoing

@@ -10,9 +10,11 @@
 #define MAX_LINE_LEN 256
 
 extern uint64_t g_nodes_searched;
+extern int g_move_order;
 
 void init_gamestate(GameState* state) {
     memset(state, 0, sizeof(GameState));
+    fill_move_order(&g_move_order);
 }
 
 int setup_board(GameState* game, const char* move_string) {
