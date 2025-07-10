@@ -57,11 +57,10 @@ int negamax(GameState* const state, int alpha, int beta) {
 
         if (!can_play(state, col)) {continue;}
 
-        make_move(state, col);
-
-        int score = -negamax(state, -beta, -alpha);
-
-        undo_move(state, col);
+        GameState new_state = *state;
+        make_move(&new_state, col);
+        
+        int score = -negamax(&new_state, -beta, -alpha);
         
         // Pruning
         if (score >= beta) return score;
