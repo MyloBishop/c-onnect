@@ -3,8 +3,14 @@
 
 // NB (HEIGHT+1)*WIDTH must be less than 64
 #define HEIGHT 6
-#define PHEIGHT (HEIGHT + 1)
 #define WIDTH 7
+#define PHEIGHT (HEIGHT + 1)
+#define POSITION_COUNT (WIDTH * HEIGHT)
+#define PIECE_COUNT 2
+
+#define MIN_SCORE (-(WIDTH*HEIGHT)/2 + 3)
+#define MAX_SCORE ((WIDTH*HEIGHT+1)/2 - 3)
+
 
 #include <stdint.h>
 #include <stdbool.h>

@@ -1,5 +1,6 @@
 #include "engine.h"
 #include "bitboard.h"
+#include "table.h"
 #include <stddef.h>
 #include <assert.h>
 
@@ -29,6 +30,8 @@ void fill_move_order(int* arr) {
 }
 
 int negamax(GameState* const state, int alpha, int beta) {
+    assert(alpha < beta);
+
     g_nodes_searched++; // Increment node count on every entry
 
     if (is_draw(state)) {
@@ -42,9 +45,17 @@ int negamax(GameState* const state, int alpha, int beta) {
             return (WIDTH*HEIGHT + 1 - state->moves) / 2;
         }
     }
-
+    
     // Upper bound beta as we cannot win immediately
     int max = (WIDTH*HEIGHT - 1 - state->moves) / 2;
+    
+    // Check transposition table
+    uint64_t key = get_key(state);
+    uint8_t table_val = get_table(key);
+    
+    if (table_val) 
+        max = unmap_val(table_val);
+
     if (beta > max) {
         beta = max;
         if (alpha >= beta) return beta;
@@ -66,5 +77,6 @@ int negamax(GameState* const state, int alpha, int beta) {
         if (score > alpha) alpha = score;
     }
 
+    put_table(get_key(state), map_val(alpha));
     return alpha;
 }
