@@ -62,8 +62,8 @@ int main(int argc, char *argv[]) {
     int score = negamax(&game, alpha, beta);
     clock_t end = clock();
 
-    double time_sec = (double)(end - start) / CLOCKS_PER_SEC;
-    long long time_microsec = (long long)(time_sec * 1e6);
+    double time_sec = ((double)(end - start) * 1e6) / CLOCKS_PER_SEC;
+    long long time_microsec = (long long)(time_sec);
 
     // Output the results as a single, space-separated line.
     // Format: score nodes_searched time_microseconds
