@@ -8,15 +8,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h> // For printf in print_board
 
 typedef struct {
     uint64_t current_player; // 1s in current player's filled positions
     uint64_t filled;         // 1s in all filled positions
     uint8_t moves;           // Number of moves played, max is HEIGHT*WIDTH (42)
 } GameState;
-
-void print_bitboard(uint64_t board);
 
 static inline uint64_t top_mask(int col) {
     return (1ULL << (HEIGHT - 1)) << col * PHEIGHT;
@@ -28,6 +25,12 @@ static inline uint64_t bottom_mask(int col) {
 
 static inline uint64_t column_mask(int col) {
     return ((1ULL << HEIGHT) - 1) << col * PHEIGHT;
+}
+
+static inline uint64_t highest_bit(uint64_t board, int col) {
+    uint64_t mask = column_mask(col) & board;
+    if (mask == 0) {return 0;}
+    return 1ULL << (63 - __builtin_clzll(mask));
 }
 
 static inline bool is_win(const uint64_t pos) {
@@ -71,6 +74,13 @@ static inline bool is_winning_move(const GameState* state, int col) {
     pos |= (state->filled + bottom_mask(col)) & column_mask(col);
     return is_win(pos);
 }
+
+
+#endif
+
+#ifdef DEBUG
+
+void print_bitboard(uint64_t board);
 
 void print_board(const GameState* state);
 

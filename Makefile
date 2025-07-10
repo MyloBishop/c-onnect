@@ -1,43 +1,51 @@
 CC = gcc
 LDFLAGS = -lm
 
-COMMON_FLAGS = -Iinclude -Wall -Wextra -Wshadow -Wformat=2
-
-RELEASE_CFLAGS = -O3 -march=native -DNDEBUG
-
-DEBUG_CFLAGS = -g -Werror -Wpedantic -gdwarf-4
-
-CFLAGS = $(COMMON_FLAGS) $(RELEASE_CFLAGS)
-
-test: CFLAGS = $(COMMON_FLAGS) $(DEBUG_CFLAGS)
-bench: CFLAGS = $(COMMON_FLAGS) $(RELEASE_CFLAGS)
-
-SRCDIR = src
-OBJDIR = obj
-BINDIR = bin
-TESTDIR = bench
+SRCDIR   = src
+OBJDIR   = obj
+BINDIR   = bin
+BENCHDIR = bench
 
 SOURCES = $(wildcard $(SRCDIR)/*.c)
-OBJECTS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SOURCES))
-EXEC = $(BINDIR)/solver
 
-.PHONY: all clean test bench
+EXEC_RELEASE = $(BINDIR)/solver
+EXEC_DEBUG   = $(BINDIR)/debug
 
-all: $(EXEC)
+OBJECTS_RELEASE = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/release/%.o, $(SOURCES))
+OBJECTS_DEBUG   = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/debug/%.o, $(SOURCES))
 
-$(EXEC): $(OBJECTS)
+COMMON_FLAGS = -Iinclude -Wall -Wextra -Wshadow -Wformat=2
+RELEASE_CFLAGS = -O3 -march=native -DNDEBUG
+DEBUG_CFLAGS = -g -Werror -Wpedantic -gdwarf-4 -DDEBUG
+
+.PHONY: all release debug clean test bench
+
+all: release
+
+release: $(EXEC_RELEASE)
+debug: $(EXEC_DEBUG)
+
+$(EXEC_RELEASE): $(OBJECTS_RELEASE)
 	mkdir -p $(BINDIR)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CC) $(OBJECTS_RELEASE) -o $@ $(LDFLAGS)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
-	mkdir -p $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+$(EXEC_DEBUG): $(OBJECTS_DEBUG)
+	mkdir -p $(BINDIR)
+	$(CC) $(OBJECTS_DEBUG) -o $@ $(LDFLAGS)
 
-test: clean $(EXEC)
-	python3 $(TESTDIR)/benchmark.py $(EXEC)
+$(OBJDIR)/release/%.o: $(SRCDIR)/%.c
+	mkdir -p $(OBJDIR)/release
+	$(CC) $(CFLAGS) $(COMMON_FLAGS) $(RELEASE_CFLAGS) -c $< -o $@
 
-bench: clean $(EXEC)
-	python3 $(TESTDIR)/benchmark.py $(EXEC)
+$(OBJDIR)/debug/%.o: $(SRCDIR)/%.c
+	mkdir -p $(OBJDIR)/debug
+	$(CC) $(CFLAGS) $(COMMON_FLAGS) $(DEBUG_CFLAGS) -c $< -o $@
+
+test: debug
+	python3 $(BENCHDIR)/benchmark.py $(EXEC_DEBUG)
+
+bench: release
+	python3 $(BENCHDIR)/benchmark.py $(EXEC_RELEASE)
 
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)

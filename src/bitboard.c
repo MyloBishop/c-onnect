@@ -1,5 +1,4 @@
 #include "bitboard.h"
-#include <stdio.h>
 
 /*
 Bitboard representation
@@ -18,44 +17,52 @@ Each column has a padding bit so that the bottom mask can quickly check filled p
 // to resolve linker errors and improve performance. Only larger, non-inlined
 // functions are left here.
 
-/**
- * @brief Prints a raw 64-bit integer as a Connect 4 board for debugging.
- * @param board The bitboard to print.
- */
+// Debugging functions
+
+#ifdef DEBUG
+#include <stdio.h>
+
 void print_bitboard(uint64_t board) {
-    for (int row = HEIGHT; row >= 0; --row) {
-        if (row == HEIGHT) {
-            printf("PAD | ");
+    printf("Bitboard State:\n");
+    printf("   +---------------+\n");
+
+    // Iterate from the padding row down to the bottom row.
+    for (int r = HEIGHT; r >= 0; --r) {
+        // Print a label for the current row.
+        if (r == HEIGHT) {
+            printf(" P | ");
         } else {
-            printf(" %d  | ", row);
+            // Add a space for alignment with "PAD"
+            printf(" %d | ", r);
         }
 
-        for (int col = 0; col < WIDTH; ++col) {
-            uint64_t bit_index = col * PHEIGHT + row;
+        // Print the contents of the row.
+        for (int c = 0; c < WIDTH; ++c) {
+            uint64_t bit_index = c * PHEIGHT + r;
             uint64_t mask = 1ULL << bit_index;
 
             if (board & mask) {
-                printf("1 ");
+                printf("X "); // A piece (or filled padding bit)
             } else {
-                printf("0 ");
+                printf(". "); // An empty spot
             }
         }
         printf("|\n");
-        if (row == HEIGHT) {
-             printf("----+-----------------+\n");
+
+        // Print a separator line after the padding row.
+        if (r == HEIGHT) {
+            printf("   +---------------+\n");
         }
     }
-    printf("----+-----------------+\n");
-    printf("      0 1 2 3 4 5 6  (Column Index)\n");
-    printf("-------------------------\n");
+
+    printf("   +---------------+\n");
+    printf("     0 1 2 3 4 5 6\n\n");
 }
 
-/**
- * @brief Prints a user-friendly representation of the game state with 'X' and 'O'.
- * @param state A pointer to the current game state.
- */
+
 void print_board(const GameState* state) {
     printf("Board State (Moves: %d)\n", state->moves);
+    printf("+---------------+\n");
     char board[HEIGHT][WIDTH];
 
     // Initialize board with empty spaces
@@ -93,3 +100,5 @@ void print_board(const GameState* state) {
     printf("+---------------+\n");
     printf("  1 2 3 4 5 6 7\n\n");
 }
+
+#endif

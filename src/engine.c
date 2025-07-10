@@ -1,9 +1,10 @@
 #include "engine.h"
 #include "bitboard.h"
+#include <stddef.h>
 #include <assert.h>
 
 // Global variable to count the number of nodes searched.
-u_int64_t g_nodes_searched = 0;
+uint64_t g_nodes_searched = 0;
 int g_move_order[WIDTH];
 
 void fill_move_order(int* arr) {
