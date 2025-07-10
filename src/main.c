@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
@@ -10,13 +9,13 @@
 extern uint64_t g_nodes_searched;
 extern int g_move_order;
 
-// Initializes the game state.
+// Initializes the game state
 void init_gamestate(GameState* state) {
     memset(state, 0, sizeof(GameState));
     fill_move_order(&g_move_order);
 }
 
-// Sets up the board from a move string.
+// Sets up the board from a move string
 int setup_board(GameState* game, const char* move_string) {
     init_gamestate(game);
     for (size_t i = 0; i < strlen(move_string); ++i) {
@@ -41,7 +40,7 @@ int setup_board(GameState* game, const char* move_string) {
 }
 
 int main(int argc, char *argv[]) {
-    // Expect a single command-line argument: the move string.
+    // Expect a single command-line argument: the move string
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <move_string>\n", argv[0]);
         return 1;
@@ -65,7 +64,7 @@ int main(int argc, char *argv[]) {
     double time_sec = ((double)(end - start) * 1e6) / CLOCKS_PER_SEC;
     long long time_microsec = (long long)(time_sec);
 
-    // Output the results as a single, space-separated line.
+    // Output the results as a single, space-separated line
     // Format: score nodes_searched time_microseconds
     fprintf(stdout, "%d %llu %lld", score, (unsigned long long)g_nodes_searched, time_microsec);
 

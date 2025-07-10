@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <assert.h>
 
-// Global variable to count the number of nodes searched.
 uint64_t g_nodes_searched = 0;
 int g_move_order[WIDTH];
 
@@ -59,7 +58,7 @@ int negamax(GameState* const state, int alpha, int beta) {
 
         GameState new_state = *state;
         make_move(&new_state, col);
-        
+
         int score = -negamax(&new_state, -beta, -alpha);
         
         // Pruning

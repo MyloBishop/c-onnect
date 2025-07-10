@@ -26,30 +26,28 @@ void print_bitboard(uint64_t board) {
     printf("Bitboard State:\n");
     printf("   +---------------+\n");
 
-    // Iterate from the padding row down to the bottom row.
     for (int r = HEIGHT; r >= 0; --r) {
-        // Print a label for the current row.
+        // Column labels 
         if (r == HEIGHT) {
             printf(" P | ");
         } else {
-            // Add a space for alignment with "PAD"
             printf(" %d | ", r);
         }
 
-        // Print the contents of the row.
         for (int c = 0; c < WIDTH; ++c) {
+            // Create a mask for the current bit
             uint64_t bit_index = c * PHEIGHT + r;
             uint64_t mask = 1ULL << bit_index;
 
+            // Check for a 1 set in current position and print result
             if (board & mask) {
-                printf("X "); // A piece (or filled padding bit)
+                printf("X ");
             } else {
-                printf(". "); // An empty spot
+                printf(". ");
             }
         }
         printf("|\n");
 
-        // Print a separator line after the padding row.
         if (r == HEIGHT) {
             printf("   +---------------+\n");
         }
@@ -63,37 +61,27 @@ void print_bitboard(uint64_t board) {
 void print_board(const GameState* state) {
     printf("Board State (Moves: %d)\n", state->moves);
     printf("+---------------+\n");
-    char board[HEIGHT][WIDTH];
 
-    // Initialize board with empty spaces
-    for (int r = 0; r < HEIGHT; ++r) {
-        for (int c = 0; c < WIDTH; ++c) {
-            board[r][c] = '.';
-        }
-    }
-
-    // Determine each player's positions
-    // The player who just moved is in `current_player ^ filled`
+    // Player 'X' is the player who just moved
     uint64_t p1_board = state->current_player ^ state->filled;
+    // Player 'O' is the current player
     uint64_t p2_board = state->current_player;
 
-    // Populate the char array with 'X' and 'O'
-    for (int c = 0; c < WIDTH; ++c) {
-        for (int r = 0; r < HEIGHT; ++r) {
-            uint64_t mask = 1ULL << (c * PHEIGHT + r);
-            if (p1_board & mask) {
-                board[r][c] = 'X';
-            } else if (p2_board & mask) {
-                board[r][c] = 'O';
-            }
-        }
-    }
-
-    // Print the board from top to bottom
     for (int r = HEIGHT - 1; r >= 0; --r) {
         printf("| ");
         for (int c = 0; c < WIDTH; ++c) {
-            printf("%c ", board[r][c]);
+            // Create a mask for the current bit
+            uint64_t bit_index = c * PHEIGHT + r;
+            uint64_t mask = 1ULL << bit_index;
+
+            // Check the mask against each player's board and print the result
+            if (p1_board & mask) {
+                printf("X ");
+            } else if (p2_board & mask) {
+                printf("O ");
+            } else {
+                printf(". ");
+            }
         }
         printf("|\n");
     }
