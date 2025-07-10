@@ -27,6 +27,12 @@ static inline uint64_t column_mask(int col) {
     return ((1ULL << HEIGHT) - 1) << col * PHEIGHT;
 }
 
+static inline uint64_t highest_bit(uint64_t board, int col) {
+    uint64_t mask = column_mask(col) & board;
+    if (mask == 0) {return 0;}
+    return 1ULL << (63 - __builtin_clzll(mask));
+}
+
 static inline bool is_win(const uint64_t pos) {
     uint64_t m;
 
@@ -61,6 +67,13 @@ static inline void make_move(GameState* state, int col) {
     state->current_player ^= state->filled;
     state->filled |= state->filled + bottom_mask(col);
     state->moves++;
+}
+
+static inline void undo_move(GameState* state, int col) {
+    uint64_t to_remove = highest_bit(state->filled, col);
+    state->filled ^= to_remove;
+    state->moves--;
+    state->current_player ^= state->filled;
 }
 
 static inline bool is_winning_move(const GameState* state, int col) {
