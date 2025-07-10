@@ -69,6 +69,13 @@ static inline void make_move(GameState* state, int col) {
     state->moves++;
 }
 
+static inline void undo_move(GameState* state, int col) {
+    uint64_t to_remove = highest_bit(state->filled, col);
+    state->filled ^= to_remove;
+    state->moves--;
+    state->current_player ^= state->filled;
+}
+
 static inline bool is_winning_move(const GameState* state, int col) {
     uint64_t pos = state->current_player;
     pos |= (state->filled + bottom_mask(col)) & column_mask(col);
