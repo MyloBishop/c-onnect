@@ -77,7 +77,7 @@ def run_test_file(executable_path, test_file_path):
     except subprocess.CalledProcessError as e:
         print(f"  {colors.FAIL}-> C-PROGRAM FAILED (Code: {e.returncode}){colors.ENDC}")
         print(f"     Position: '{move_string}'")
-        print(f"     {colors.BOLD}C-program stderr:{colors.ENDC}\n{e.stderr.strip()}")
+        print(f"     {colors.BOLD}C-program stderr:{colors.ENDC}\n\n{e.stderr.strip()}")
         return False
     except FileNotFoundError:   
         print(f"  {colors.FAIL}-> ERROR: Test file not found at '{test_file_path}'.{colors.ENDC}")

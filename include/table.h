@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <assert.h>
 #include "bitboard.h"
 
 #define TABLE_ENTRIES ((1 << 23) + 9)
@@ -10,18 +11,51 @@
 extern uint32_t keys[TABLE_ENTRIES];
 extern uint8_t vals[TABLE_ENTRIES];
 
-uint64_t get_key(GameState* state);
-
 void reset_table(void);
 
-size_t table_index(uint64_t key);
+static inline uint64_t get_key(GameState* state) {
+    return state->current_player + state->filled;
+}
 
-uint8_t map_val(int val);
+static inline size_t table_index(uint64_t key) {
+    return key % TABLE_ENTRIES;
+}
 
-int unmap_val(uint8_t val);
+// we shift our evaluation values so that 0 can
+// represent a non-present entry instead of a draw
+static inline uint8_t map_val(int val) {
+    assert(1 - MIN_SCORE + MAX_SCORE < 256);
+    return (uint8_t)val - MIN_SCORE + 1;
+}
 
-void put_table(uint64_t key, uint8_t val);
+static inline int unmap_val(uint8_t val) {
+    assert(1 - MIN_SCORE + MAX_SCORE < 256);
+    return (int)val + MIN_SCORE - 1;
+}
 
-uint8_t get_table(uint64_t key);
+static inline void put_table(uint64_t key, uint8_t val) {
+    assert(key < (1ULL << 49));
+    assert(val != 0); // 0 is reserved for empty entries
+
+    size_t i = table_index(key);
+    keys[i] = (uint32_t)key;
+    vals[i] = val;
+}
+
+static inline uint8_t get_table(uint64_t key) {
+    size_t i = table_index(key);
+    uint32_t table_key = keys[i];
+    uint32_t table_val = vals[i];
+
+    if (table_val == 0) {
+        return 0;
+    }
+
+    if (table_key != (uint32_t)key) {
+        return 0;
+    }
+
+    return table_val;
+}
 
 #endif
