@@ -13,7 +13,7 @@ uint64_t get_key(GameState* state) {
 }
 
 void reset_table(void) {
-    memset(&table, 0, TABLE_SIZE_BYTES); // 0 means missing data
+    memset(&table, 0, TABLE_ENTRIES * sizeof(Entry)); // 0 means missing data
 }
 
 size_t table_index(uint64_t key) {
@@ -23,10 +23,12 @@ size_t table_index(uint64_t key) {
 // we shift our evaluation values so that 0 can
 // represent a non-present entry instead of a draw
 uint8_t map_val(int val) {
+    assert(1 - MIN_SCORE + MAX_SCORE < 256);
     return (uint8_t)val - MIN_SCORE + 1;
 }
 
 int unmap_val(uint8_t val) {
+    assert(1 - MIN_SCORE + MAX_SCORE < 256);
     return (int)val + MIN_SCORE - 1;
 }
 

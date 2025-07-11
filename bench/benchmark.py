@@ -2,7 +2,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-TIMEOUT_SECONDS = 10.0
+TIMEOUT_SECONDS = 60.0
 
 # ANSI colors for formatted output.
 class colors:

@@ -5,9 +5,7 @@
 #include <stddef.h>
 #include "bitboard.h"
 
-#define TABLE_SIZE_MB 64
-#define TABLE_SIZE_BYTES (TABLE_SIZE_MB * 1024)
-#define TABLE_ENTRIES (TABLE_SIZE_BYTES / sizeof(Entry))
+#define TABLE_ENTRIES 8388593 // closest prime to 64MB table
 
 typedef struct {
     uint64_t key: 56;
