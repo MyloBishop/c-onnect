@@ -56,11 +56,9 @@ int main(int argc, char *argv[]) {
     }
 
     g_nodes_searched = 0;
-    const int alpha = -WIDTH * HEIGHT / 2;
-    const int beta = WIDTH * HEIGHT / 2;
 
     clock_t start = clock();
-    int score = negamax(&game, alpha, beta);
+    int score = solve(&game);
     clock_t end = clock();
 
     double time_sec = ((double)(end - start) * 1e6) / CLOCKS_PER_SEC;

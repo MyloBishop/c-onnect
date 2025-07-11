@@ -96,3 +96,18 @@ int negamax(GameState* const state, int alpha, int beta) {
     put_table(get_key(state), map_val(alpha));
     return alpha;
 }
+
+int solve(GameState* const state) {
+    int min = -(WIDTH * HEIGHT - state->moves) / 2;
+    int max = (WIDTH * HEIGHT + 1 - state->moves) / 2;
+
+    while (min < max) {
+        int med = min + (max - min) / 2;
+        if (med <= 0 && min / 2 < med) med = min / 2;
+        else if (med >= 0 && max / 2 > med) med = max / 2;
+        int r = negamax(state, med, med+1); // null window search
+        if (r <= med) max = r;
+        else min = r;
+    }
+    return min;
+}

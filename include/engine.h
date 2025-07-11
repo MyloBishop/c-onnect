@@ -5,5 +5,6 @@
 
 void fill_move_order(int* arr);
 int negamax(GameState* const state, int alpha, int beta);
+int solve(GameState* const state);
 
 #endif
