@@ -53,18 +53,31 @@ int negamax(GameState* const state, int alpha, int beta) {
     uint64_t key = get_key(state);
     uint8_t table_val = get_table(key);
     
-    if (table_val) 
-        max = unmap_val(table_val);
-
+    if (table_val) {
+        // Check if the stored value is a lower bound (a "fail-high" node)
+        if (table_val > MAX_SCORE) {
+            int min_score = unmap_val(table_val - (MAX_SCORE + 1));
+            
+            if (alpha < min_score) {
+                alpha = min_score;
+                if (alpha >= beta) return alpha; // Prune
+            }
+        }
+        // Otherwise, it's an upper bound (a "fail-low" node)
+        else {
+            max = unmap_val(table_val);
+        }
+    }
+    
     if (beta > max) {
         beta = max;
-        if (alpha >= beta) return beta;
+        if (alpha >= beta) return beta; // Prune
     }
 
     // Iterate through child nodes
     for (int i = 0; i < WIDTH; i++) {
         int col = g_move_order[i];
-
+    
         if (!can_play(state, col)) {continue;}
 
         GameState new_state = *state;
@@ -73,7 +86,10 @@ int negamax(GameState* const state, int alpha, int beta) {
         int score = -negamax(&new_state, -beta, -alpha);
         
         // Pruning
-        if (score >= beta) return score;
+        if (score >= beta) {
+            put_table(get_key(state), map_val(score) + MAX_SCORE + 1); // Store lower bound
+            return score;
+        }
         if (score > alpha) alpha = score;
     }
 
