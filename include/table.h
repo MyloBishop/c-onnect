@@ -5,14 +5,10 @@
 #include <stddef.h>
 #include "bitboard.h"
 
-#define TABLE_ENTRIES 8388593 // closest prime to 64MB table
+#define TABLE_ENTRIES ((1 << 23) + 9)
 
-typedef struct {
-    uint64_t key: 56;
-    uint8_t val;
-} Entry;
-
-extern Entry table[TABLE_ENTRIES];
+extern uint32_t keys[TABLE_ENTRIES];
+extern uint8_t vals[TABLE_ENTRIES];
 
 uint64_t get_key(GameState* state);
 

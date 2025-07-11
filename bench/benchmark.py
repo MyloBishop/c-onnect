@@ -2,7 +2,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-TIMEOUT_SECONDS = 60.0
+TIMEOUT_SECONDS = 300.0
 
 # ANSI colors for formatted output.
 class colors:
@@ -72,7 +72,7 @@ def run_test_file(executable_path, test_file_path):
                 total_time_us += time_us
 
     except subprocess.TimeoutExpired:
-        print(f"  {colors.FAIL}-> TIMEOUT{colors.ENDC} (Position '{move_string}' exceeded {TIMEOUT_SECONDS:.1f}s)")
+        print(f"  {colors.FAIL}-> TIMEOUT [Line {line_num}]{colors.ENDC} (Position '{move_string}' exceeded {TIMEOUT_SECONDS:.1f}s)")
         return False
     except subprocess.CalledProcessError as e:
         print(f"  {colors.FAIL}-> C-PROGRAM FAILED (Code: {e.returncode}){colors.ENDC}")

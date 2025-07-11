@@ -6,14 +6,17 @@
 #include "bitboard.h"
 #include "table.h"
 
-Entry table[TABLE_ENTRIES];
+uint32_t keys[TABLE_ENTRIES];
+uint8_t vals[TABLE_ENTRIES];
 
 uint64_t get_key(GameState* state) {
     return state->current_player + state->filled;
 }
 
 void reset_table(void) {
-    memset(&table, 0, TABLE_ENTRIES * sizeof(Entry)); // 0 means missing data
+    // 0 means missing data
+    memset(&keys, 0, TABLE_ENTRIES * sizeof(keys[0]));
+    memset(&vals, 0, TABLE_ENTRIES * sizeof(vals[0]));
 }
 
 size_t table_index(uint64_t key) {
@@ -33,23 +36,26 @@ int unmap_val(uint8_t val) {
 }
 
 void put_table(uint64_t key, uint8_t val) {
-    assert(key < (1ULL << 56));
+    assert(key < (1ULL << 49));
+    assert(val != 0); // 0 is reserved for empty entries
 
     size_t i = table_index(key);
-    table[i].key = key;
-    table[i].val = val;
+    keys[i] = (uint32_t)key;
+    vals[i] = val;
 }
 
-uint8_t get_table(u_int64_t key) {
-    Entry entry = table[table_index(key)];
+uint8_t get_table(uint64_t key) {
+    size_t i = table_index(key);
+    uint32_t table_key = keys[i];
+    uint32_t table_val = vals[i];
 
-    if (entry.val == 0) {
+    if (table_val == 0) {
         return 0;
     }
 
-    if (entry.key != key) { 
+    if (table_key != (uint32_t)key) { 
         return 0;
     }
 
-    return entry.val;
+    return table_val;
 }
