@@ -1,45 +1,22 @@
 #include "engine.h"
 #include "bitboard.h"
 #include "table.h"
+#include "ordering.h"
 #include <stddef.h>
 #include <assert.h>
 
 uint64_t g_nodes_searched = 0;
-int g_move_order[WIDTH];
-
-void fill_move_order(int* arr) {
-    assert(arr != NULL);
-
-    int center = (WIDTH - 1) / 2;
-    arr[0] = center;
-    int count = 1;
-
-    for (int i = 1; count < WIDTH; ++i) {
-        int left = center - i;
-        if (left >= 0) {
-            arr[count++] = left;
-        }
-
-        if (count >= WIDTH) break;
-
-        int right = center + i;
-        if (right < WIDTH) {
-            arr[count++] = right;
-        }
-    }
-}
 
 int negamax(GameState* const state, int alpha, int beta) {
     assert(alpha < beta);
 
-    g_nodes_searched++; // Increment node count on every entry
+    g_nodes_searched++; // Increment node count
 
     if (is_draw(state)) {
         return 0;
     }
 
-    // Check if the current player can win on the next move. This is a critical check.
-    // We must play a winning move if one is available.
+    // Check if the current player can win on the next move.
     if (can_win_next(state)) {
         return (WIDTH*HEIGHT + 1 - state->moves) / 2;
     }
@@ -56,20 +33,16 @@ int negamax(GameState* const state, int alpha, int beta) {
     uint8_t table_val = get_table(key);
 
     if (table_val) {
-        // Check if the stored value is a lower bound (a "fail-high" node)
-        if (table_val > MAX_SCORE) {
+        if (table_val > MAX_SCORE) { // Check if the stored value is a lower bound
             int min_score = unmap_val(table_val - (MAX_SCORE + 1));
-
             if (alpha < min_score) {
                 alpha = min_score;
                 if (alpha >= beta) return alpha; // Prune
             }
-        }
-        // Otherwise, it's an upper bound (a "fail-low" node)
-        else {
-            max = unmap_val(table_val);
-            if (beta > max) {
-                beta = max;
+        } else { // Otherwise, it's an upper bound
+            int stored_max = unmap_val(table_val);
+            if (beta > stored_max) {
+                beta = stored_max;
                 if (alpha >= beta) return beta; // Prune
             }
         }
@@ -81,12 +54,14 @@ int negamax(GameState* const state, int alpha, int beta) {
         return -(WIDTH*HEIGHT - state->moves) / 2;
     }
 
-    // Iterate through child nodes, using the optimized move mask
-    for (int i = 0; i < WIDTH; i++) {
-        int col = g_move_order[i];
+    // Create a local array for moves and sort them dynamically.
+    MoveScore move_scores[WIDTH];
+    order_moves(state, move_scores);
 
-        // A move is possible in 'col' if the intersection of the column mask
-        // and the non-losing moves mask is non-zero.
+    // Iterate through child nodes
+    for (int i = 0; i < WIDTH; i++) {
+        int col = move_scores[i].col;
+
         if (moves_mask & column_mask(col)) {
             GameState new_state = *state;
             make_move(&new_state, col);
