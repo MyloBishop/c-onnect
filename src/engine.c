@@ -38,26 +38,28 @@ int negamax(GameState* const state, int alpha, int beta) {
         return 0;
     }
 
-    // Check if the opponent can win on the next move
-    for (int col = 0; col < WIDTH; col++) {
-        if (can_play(state, col) && is_winning_move(state, col)) {
-            // Return the best possible score for a winning move
-            return (WIDTH*HEIGHT + 1 - state->moves) / 2;
-        }
+    // Check if the current player can win on the next move. This is a critical check.
+    // We must play a winning move if one is available.
+    if (can_win_next(state)) {
+        return (WIDTH*HEIGHT + 1 - state->moves) / 2;
     }
-    
+
     // Upper bound beta as we cannot win immediately
     int max = (WIDTH*HEIGHT - 1 - state->moves) / 2;
-    
+    if (beta > max) {
+        beta = max;
+        if (alpha >= beta) return beta; // Prune
+    }
+
     // Check transposition table
     uint64_t key = get_key(state);
     uint8_t table_val = get_table(key);
-    
+
     if (table_val) {
         // Check if the stored value is a lower bound (a "fail-high" node)
         if (table_val > MAX_SCORE) {
             int min_score = unmap_val(table_val - (MAX_SCORE + 1));
-            
+
             if (alpha < min_score) {
                 alpha = min_score;
                 if (alpha >= beta) return alpha; // Prune
@@ -66,31 +68,38 @@ int negamax(GameState* const state, int alpha, int beta) {
         // Otherwise, it's an upper bound (a "fail-low" node)
         else {
             max = unmap_val(table_val);
+            if (beta > max) {
+                beta = max;
+                if (alpha >= beta) return beta; // Prune
+            }
         }
     }
-    
-    if (beta > max) {
-        beta = max;
-        if (alpha >= beta) return beta; // Prune
+
+    // Get a bitmask of moves that do not lose in one turn.
+    uint64_t moves_mask = possible_non_losing_moves(state);
+    if (moves_mask == 0) { // If all moves are losing, return the worst score
+        return -(WIDTH*HEIGHT - state->moves) / 2;
     }
 
-    // Iterate through child nodes
+    // Iterate through child nodes, using the optimized move mask
     for (int i = 0; i < WIDTH; i++) {
         int col = g_move_order[i];
-    
-        if (!can_play(state, col)) {continue;}
 
-        GameState new_state = *state;
-        make_move(&new_state, col);
+        // A move is possible in 'col' if the intersection of the column mask
+        // and the non-losing moves mask is non-zero.
+        if (moves_mask & column_mask(col)) {
+            GameState new_state = *state;
+            make_move(&new_state, col);
 
-        int score = -negamax(&new_state, -beta, -alpha);
-        
-        // Pruning
-        if (score >= beta) {
-            put_table(get_key(state), map_val(score) + MAX_SCORE + 1); // Store lower bound
-            return score;
+            int score = -negamax(&new_state, -beta, -alpha);
+
+            // Pruning
+            if (score >= beta) {
+                put_table(get_key(state), map_val(score) + MAX_SCORE + 1); // Store lower bound
+                return score;
+            }
+            if (score > alpha) alpha = score;
         }
-        if (score > alpha) alpha = score;
     }
 
     put_table(get_key(state), map_val(alpha));
@@ -105,7 +114,7 @@ int solve(GameState* const state) {
         int med = min + (max - min) / 2;
         if (med <= 0 && min / 2 < med) med = min / 2;
         else if (med >= 0 && max / 2 > med) med = max / 2;
-        int r = negamax(state, med, med+1); // null window search
+        int r = negamax(state, med, med + 1); // null window search
         if (r <= med) max = r;
         else min = r;
     }
