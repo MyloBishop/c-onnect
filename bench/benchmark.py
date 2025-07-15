@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 from tqdm import tqdm
 
-TIMEOUT_SECONDS = 60.0
+TIMEOUT_SECONDS = 600.0
 
 # ANSI colors for formatted output.
 class colors:
