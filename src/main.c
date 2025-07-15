@@ -8,12 +8,10 @@
 #include "table.h"
 
 extern uint64_t g_nodes_searched;
-extern int g_move_order;
 
 // Initializes the game state
 void init_gamestate(GameState* state) {
     memset(state, 0, sizeof(GameState));
-    fill_move_order(&g_move_order);
     reset_table();
 }
 

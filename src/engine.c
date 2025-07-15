@@ -1,33 +1,11 @@
 #include "engine.h"
 #include "bitboard.h"
 #include "table.h"
+#include "ordering.h"
 #include <stddef.h>
 #include <assert.h>
 
 uint64_t g_nodes_searched = 0;
-int g_move_order[WIDTH];
-
-void fill_move_order(int* arr) {
-    assert(arr != NULL);
-
-    int center = (WIDTH - 1) / 2;
-    arr[0] = center;
-    int count = 1;
-
-    for (int i = 1; count < WIDTH; ++i) {
-        int left = center - i;
-        if (left >= 0) {
-            arr[count++] = left;
-        }
-
-        if (count >= WIDTH) break;
-
-        int right = center + i;
-        if (right < WIDTH) {
-            arr[count++] = right;
-        }
-    }
-}
 
 int negamax(GameState* const state, int alpha, int beta) {
     assert(alpha < beta);
@@ -81,13 +59,14 @@ int negamax(GameState* const state, int alpha, int beta) {
         return -(WIDTH*HEIGHT - state->moves) / 2;
     }
 
-    // Iterate through child nodes, using the optimized move mask
-    for (int i = 0; i < WIDTH; i++) {
-        int col = g_move_order[i];
+    int move_order[WIDTH];
+    int num_moves = sort_moves(state, move_order);
 
-        // A move is possible in 'col' if the intersection of the column mask
-        // and the non-losing moves mask is non-zero.
-        if (moves_mask & column_mask(col)) {
+    // Iterate through child nodes, using the optimized move mask
+    for (int i = 0; i < num_moves; i++) {
+        int col = move_order[i];
+
+        if ((moves_mask & column_mask(col))) {
             GameState new_state = *state;
             make_move(&new_state, col);
 
@@ -111,12 +90,15 @@ int solve(GameState* const state) {
     int max = (WIDTH * HEIGHT + 1 - state->moves) / 2;
 
     while (min < max) {
+        // Use a standard, correct midpoint for the binary search.
         int med = min + (max - min) / 2;
-        if (med <= 0 && min / 2 < med) med = min / 2;
-        else if (med >= 0 && max / 2 > med) med = max / 2;
-        int r = negamax(state, med, med + 1); // null window search
-        if (r <= med) max = r;
-        else min = r;
+        
+        int r = negamax(state, med, med + 1);
+        if (r <= med) {
+            max = r;
+        } else {
+            min = r;
+        }
     }
     return min;
 }

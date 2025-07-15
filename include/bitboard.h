@@ -80,6 +80,7 @@ static inline bool can_play(const GameState* state, int col) {
 
 // Places a piece and updates the state for the next player
 static inline void make_move(GameState* state, int col) {
+    assert(can_play(state, col));
     state->current_player ^= state->filled;
     state->filled |= state->filled + bottom_mask(col);
     state->moves++;
@@ -156,6 +157,22 @@ static inline uint64_t possible_non_losing_moves(const GameState* state) {
     return possible_mask & ~(opponent_win >> 1); // Avoid playing under an opponent's winning spot
 }
 
+static inline unsigned int popcount(uint64_t m) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_popcountll(m);
+// Fallback Kernighan's algorithm
+#else
+    unsigned int c = 0;
+    for (c = 0; m; c++) {
+        m &= m - 1;
+    }
+    return c;
+#endif
+}
+
+static inline int move_score(const GameState* state, int col) {
+    return popcount(compute_winning_position(state->current_player | (state->filled + bottom_mask(col)), state->filled));
+}
 
 #endif
 
