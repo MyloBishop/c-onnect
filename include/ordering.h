@@ -22,15 +22,15 @@ void insertion_sort_scored_move(ScoredMove* arr, int n)
     }
 }
 
-int sort_moves(const GameState* state, int* arr) {
+int sort_moves(const GameState* state, int* arr, uint64_t moves_mask) {
     ScoredMove scored_moves[WIDTH];
     int num_moves = 0;
 
-    const int base_order[7] = {3,2,4,1,5,0,6};
+    const int base_order[WIDTH] = {3,4,2,5,1,6,0};
 
     for (int i = 0; i < WIDTH; i++) {
         int col = base_order[i];
-        if (can_play(state, col)) {
+        if ((moves_mask & column_mask(col))) {
             scored_moves[num_moves].move = col;
             scored_moves[num_moves].score = move_score(state, col);
             num_moves++;
