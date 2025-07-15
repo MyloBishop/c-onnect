@@ -90,7 +90,6 @@ int solve(GameState* const state) {
     int max = (WIDTH * HEIGHT + 1 - state->moves) / 2;
 
     while (min < max) {
-        // Use a standard, correct midpoint for the binary search.
         int med = min + (max - min) / 2;
         
         int r = negamax(state, med, med + 1);

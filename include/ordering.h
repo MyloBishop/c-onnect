@@ -14,7 +14,7 @@ void insertion_sort_scored_move(ScoredMove* arr, int n)
         key = arr[i];
         j = i - 1;
 
-        while (j >= 0 && arr[j].score > key.score) {
+        while (j >= 0 && arr[j].score < key.score) {
             arr[j + 1] = arr[j];
             j = j - 1;
         }
