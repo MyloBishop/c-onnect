@@ -16,12 +16,6 @@ int negamax(GameState* const state, int alpha, int beta) {
         return 0;
     }
 
-    // Check if the current player can win on the next move. This is a critical check.
-    // We must play a winning move if one is available.
-    if (can_win_next(state)) {
-        return (WIDTH*HEIGHT + 1 - state->moves) / 2;
-    }
-
     // Upper bound beta as we cannot win immediately
     int max = (WIDTH*HEIGHT - 1 - state->moves) / 2;
     if (beta > max) {
@@ -88,16 +82,25 @@ int negamax(GameState* const state, int alpha, int beta) {
 int solve(GameState* const state) {
     int min = -(WIDTH * HEIGHT - state->moves) / 2;
     int max = (WIDTH * HEIGHT + 1 - state->moves) / 2;
+    
+    if (can_win_next(state)) {
+        return max;
+    }
 
     while (min < max) {
         int med = min + (max - min) / 2;
         
-        int r = negamax(state, med, med + 1);
-        if (r <= med) {
-            max = r;
-        } else {
-            min = r;
+        // bias towards 0
+        if (med <= 0 && min / 2 < med) {
+            med = min / 2;
+        } else if (med >= 0 && max / 2 > med) {
+            med = max / 2;
         }
+
+        int r = negamax(state, med, med + 1);
+
+        if (r <= med) max = r;
+        else min = r;
     }
     return min;
 }
