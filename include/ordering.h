@@ -43,5 +43,7 @@ int sort_moves(const GameState* state, int* arr, uint64_t moves_mask) {
         arr[i] = scored_moves[i].move;
     }
     
+    assert((unsigned int)num_moves == popcount(moves_mask));
+
     return num_moves;
 }

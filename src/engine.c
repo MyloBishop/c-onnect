@@ -41,12 +41,14 @@ int negamax(GameState* const state, int alpha, int beta) {
     if (table_val) {
         if (table_val > BOUND_SEPARATOR) { // It's a lower bound
             int min_score = DECODE_LOWER_BOUND(table_val);
+            assert(min_score >= MIN_SCORE && min_score <= MAX_SCORE);
             if (alpha < min_score) {
                 alpha = min_score;
                 if (alpha >= beta) return alpha;
             }
         } else { // It's an upper bound
             int max_score = DECODE_UPPER_BOUND(table_val);
+            assert(max_score >= MIN_SCORE && max_score <= MAX_SCORE);
             if (beta > max_score) {
                 beta = max_score;
                 if (alpha >= beta) return beta;
@@ -54,11 +56,14 @@ int negamax(GameState* const state, int alpha, int beta) {
         }
     }
 
+
     int move_order[WIDTH];
     int num_moves = sort_moves(state, move_order, moves_mask);
 
     for (int i = 0; i < num_moves; i++) {
         int col = move_order[i];
+        
+        assert((moves_mask & column_mask(col)) != 0);
 
         GameState new_state = *state;
         make_move(&new_state, col);
