@@ -1,92 +1,180 @@
 #include "bitboard.h"
+#include <string.h>
 
-/*
-Bitboard representation
-Each column has a padding bit so that the bottom mask can quickly check filled positions
+// --- Pre-computed Masks ---
 
-.  .  .  .  .  .  .   <- Padding row (bit 6)
-5 12 19 26 33 40 47
-4 11 18 25 32 39 46
-3 10 17 24 31 38 45
-2  9 16 23 30 37 44
-1  8 15 22 29 36 43
-0  7 14 21 28 35 42
-*/
+// A mask representing the bottom row of the entire board.
+static const uint64_t BOTTOM_MASK = ((1ULL << (WIDTH * PHEIGHT)) - 1) / ((1ULL << PHEIGHT) - 1);
 
-// Note: Most functions have been moved to bitboard.h as `static inline`
-// to resolve linker errors and improve performance. Only larger, non-inlined
-// functions are left here.
+// A mask representing all playable squares on the board.
+static const uint64_t BOARD_MASK = BOTTOM_MASK * ((1ULL << HEIGHT) - 1);
 
-// Debugging functions
+// --- Static Helper Functions ---
 
-#ifdef DEBUG
-#include <stdio.h>
-
-void print_bitboard(uint64_t board) {
-    printf("Bitboard State:\n");
-    printf("   +---------------+\n");
-
-    for (int r = HEIGHT; r >= 0; --r) {
-        // Column labels 
-        if (r == HEIGHT) {
-            printf(" P | ");
-        } else {
-            printf(" %d | ", r);
-        }
-
-        for (int c = 0; c < WIDTH; ++c) {
-            // Create a mask for the current bit
-            uint64_t bit_index = c * PHEIGHT + r;
-            uint64_t mask = 1ULL << bit_index;
-
-            // Check for a 1 set in current position and print result
-            if (board & mask) {
-                printf("X ");
-            } else {
-                printf(". ");
-            }
-        }
-        printf("|\n");
-
-        if (r == HEIGHT) {
-            printf("   +---------------+\n");
-        }
-    }
-
-    printf("   +---------------+\n");
-    printf("     0 1 2 3 4 5 6\n\n");
+static uint64_t top_mask_for_col(int col) {
+    return 1ULL << ((HEIGHT - 1) + col * PHEIGHT);
 }
 
-
-void print_board(const GameState* state) {
-    printf("Board State (Moves: %d)\n", state->moves);
-    printf("+---------------+\n");
-
-    // Player 'X' is the player who just moved
-    uint64_t p1_board = state->current_player ^ state->filled;
-    // Player 'O' is the current player
-    uint64_t p2_board = state->current_player;
-
-    for (int r = HEIGHT - 1; r >= 0; --r) {
-        printf("| ");
-        for (int c = 0; c < WIDTH; ++c) {
-            // Create a mask for the current bit
-            uint64_t bit_index = c * PHEIGHT + r;
-            uint64_t mask = 1ULL << bit_index;
-
-            // Check the mask against each player's board and print the result
-            if (p1_board & mask) {
-                printf("X ");
-            } else if (p2_board & mask) {
-                printf("O ");
-            } else {
-                printf(". ");
-            }
-        }
-        printf("|\n");
-    }
-    printf("+---------------+\n");
-    printf("  1 2 3 4 5 6 7\n\n");
+static uint64_t bottom_mask_for_col(int col) {
+    return 1ULL << (col * PHEIGHT);
 }
 
+static uint64_t possible(const GameState* state) {
+    return (state->mask + BOTTOM_MASK) & BOARD_MASK;
+}
+
+static unsigned int popcount(uint64_t m) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_popcountll(m);
+#else
+    unsigned int c = 0;
+    for (c = 0; m; c++) {
+        m &= m - 1;
+    }
+    return c;
 #endif
+}
+
+static uint64_t compute_winning_position(uint64_t position, uint64_t mask) {
+    // Vertical
+    uint64_t r = (position << 1) & (position << 2) & (position << 3);
+
+    // Horizontal
+    uint64_t p = (position << PHEIGHT) & (position << (2 * PHEIGHT));
+    r |= p & (position << (3 * PHEIGHT));
+    r |= p & (position >> PHEIGHT);
+    p = (position >> PHEIGHT) & (position >> (2 * PHEIGHT));
+    r |= p & (position << PHEIGHT);
+    r |= p & (position >> (3 * PHEIGHT));
+
+    // Diagonal (y = -x)
+    p = (position << (PHEIGHT - 1)) & (position << (2 * (PHEIGHT - 1)));
+    r |= p & (position << (3 * (PHEIGHT - 1)));
+    r |= p & (position >> (PHEIGHT - 1));
+    p = (position >> (PHEIGHT - 1)) & (position >> (2 * (PHEIGHT - 1)));
+    r |= p & (position << (PHEIGHT - 1));
+    r |= p & (position >> (3 * (PHEIGHT - 1)));
+
+    // Diagonal (y = x)
+    p = (position << (PHEIGHT + 1)) & (position << (2 * (PHEIGHT + 1)));
+    r |= p & (position << (3 * (PHEIGHT + 1)));
+    r |= p & (position >> (PHEIGHT + 1));
+    p = (position >> (PHEIGHT + 1)) & (position >> (2 * (PHEIGHT + 1)));
+    r |= p & (position << (PHEIGHT + 1));
+    r |= p & (position >> (3 * (PHEIGHT + 1)));
+
+    return r & (BOARD_MASK ^ mask);
+}
+
+static uint64_t opponent_winning_position(const GameState* state) {
+    return compute_winning_position(state->current_position ^ state->mask, state->mask);
+}
+
+static uint64_t winning_position(const GameState* state) {
+    return compute_winning_position(state->current_position, state->mask);
+}
+
+// Get the index of the least significant set bit
+static inline int count_trailing_zeros(uint64_t n) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_ctzll(n);
+#else
+    int count = 0;
+    while ((n & 1) == 0) {
+        n >>= 1;
+        count++;
+    }
+    return count;
+#endif
+}
+
+// --- Public API Implementations ---
+
+void init_gamestate(GameState* state) {
+    assert(state != NULL);
+    state->current_position = 0;
+    state->mask = 0;
+    state->moves = 0;
+}
+
+void play_move(GameState* state, int col) {
+    assert(state != NULL);
+    assert(col >= 0 && col < WIDTH);
+    assert(can_play(state, col));
+
+    uint64_t move = (state->mask + bottom_mask_for_col(col)) & column_mask(col);
+    state->current_position ^= state->mask; // Switch current player's stones to opponent
+    state->mask |= move;                    // Add the new stone to the mask
+    state->moves++;
+}
+
+bool can_play(const GameState* state, int col) {
+    assert(state != NULL);
+    assert(col >= 0 && col < WIDTH);
+    return (state->mask & top_mask_for_col(col)) == 0;
+}
+
+bool is_winning_move(const GameState* state, int col) {
+    assert(state != NULL);
+    assert(col >= 0 && col < WIDTH);
+    
+    // The new piece is placed on the board for checking
+    const uint64_t pos = state->current_position | ((state->mask + bottom_mask_for_col(col)) & column_mask(col));
+
+    // Check all four directions for a four-in-a-row.
+    // Each check looks for a pattern of 4 adjacent bits.
+    
+    // Horizontal check
+    uint64_t horizontal_win = pos & (pos >> PHEIGHT);
+    if ((horizontal_win & (horizontal_win >> (2 * PHEIGHT))) != 0) return true;
+
+    // Vertical check
+    uint64_t vertical_win = pos & (pos >> 1);
+    if ((vertical_win & (vertical_win >> 2)) != 0) return true;
+
+    // Diagonal (y = x) check
+    uint64_t diag1_win = pos & (pos >> (PHEIGHT + 1));
+    if ((diag1_win & (diag1_win >> (2 * (PHEIGHT + 1)))) != 0) return true;
+
+    // Diagonal (y = -x) check
+    uint64_t diag2_win = pos & (pos >> (PHEIGHT - 1));
+    if ((diag2_win & (diag2_win >> (2 * (PHEIGHT - 1)))) != 0) return true;
+
+    return false;
+}
+
+bool can_win_next(const GameState* state) {
+    assert(state != NULL);
+    return (winning_position(state) & possible(state)) != 0;
+}
+
+bool is_draw(const GameState* state) {
+    assert(state != NULL);
+    return state->moves >= WIDTH * HEIGHT;
+}
+
+uint64_t possible_non_losing_moves(const GameState* state) {
+    assert(state != NULL);
+    assert(!can_win_next(state));
+    uint64_t possible_mask = possible(state);
+    uint64_t opponent_win = opponent_winning_position(state);
+    uint64_t forced_moves = possible_mask & opponent_win;
+    if (forced_moves) {
+        if (forced_moves & (forced_moves - 1)) { // Opponent has more than one threat
+            return 0; // Loss is unavoidable
+        }
+        possible_mask = forced_moves; // Must play the single blocking move
+    }
+    return possible_mask & ~(opponent_win >> 1); // Avoid playing under an opponent's winning spot
+}
+
+int move_score(const GameState* state, uint64_t move) {
+    assert(state != NULL);
+    uint64_t new_pos = state->current_position | move;
+    uint64_t new_mask = state->mask | move; // Assume move is on the mask
+    return popcount(compute_winning_position(new_pos, new_mask));
+}
+
+int bitboard_to_col(uint64_t move) {
+    return count_trailing_zeros(move) / PHEIGHT;
+}

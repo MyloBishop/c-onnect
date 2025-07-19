@@ -1,49 +1,34 @@
+#ifndef ORDERING_H
+#define ORDERING_H
+
 #include "bitboard.h"
+#include <stdint.h>
 
 typedef struct {
-    int move;
+    uint64_t move;
     int score;
-} ScoredMove;
+} MoveEntry;
 
-void insertion_sort_scored_move(ScoredMove* arr, int n)
-{
-    int i, j;
-    ScoredMove key;
+typedef struct {
+    MoveEntry entries[WIDTH];
+    int size;
+} MoveSorter;
 
-    for (i = 1; i < n; ++i) {
-        key = arr[i];
-        j = i - 1;
+/**
+ * @brief Initializes or resets a move sorter to be empty.
+ */
+void sorter_init(MoveSorter* sorter);
 
-        while (j >= 0 && arr[j].score < key.score) {
-            arr[j + 1] = arr[j];
-            j = j - 1;
-        }
-        arr[j + 1] = key;
-    }
-}
+/**
+ * @brief Adds a move and its score to the sorter, maintaining sorted order.
+ * Uses insertion sort.
+ */
+void sorter_add(MoveSorter* sorter, uint64_t move, int score);
 
-int sort_moves(const GameState* state, int* arr, uint64_t moves_mask) {
-    ScoredMove scored_moves[WIDTH];
-    int num_moves = 0;
+/**
+ * @brief Retrieves the best move (highest score) from the sorter and removes it.
+ * @return The bitmask of the best move, or 0 if the sorter is empty.
+ */
+uint64_t sorter_get_next(MoveSorter* sorter);
 
-    const int base_order[WIDTH] = {3,4,2,5,1,6,0};
-
-    for (int i = 0; i < WIDTH; i++) {
-        int col = base_order[i];
-        if ((moves_mask & column_mask(col))) {
-            scored_moves[num_moves].move = col;
-            scored_moves[num_moves].score = move_score(state, col);
-            num_moves++;
-        }
-    }
-
-    insertion_sort_scored_move(scored_moves, num_moves);
-
-    for (int i = 0; i < num_moves; i++) {
-        arr[i] = scored_moves[i].move;
-    }
-    
-    assert((unsigned int)num_moves == popcount(moves_mask));
-
-    return num_moves;
-}
+#endif // ORDERING_H

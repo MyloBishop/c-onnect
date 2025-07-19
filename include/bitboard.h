@@ -1,187 +1,124 @@
 #ifndef BITBOARD_H
 #define BITBOARD_H
 
-// Board dimensions
-#define HEIGHT 6
-#define WIDTH 7
-#define PHEIGHT (HEIGHT + 1) // Padded height to prevent column wrap-around
-#define POSITION_COUNT (WIDTH * HEIGHT)
-#define PIECE_COUNT 2
-
-// Heuristic score bounds for the solver
-#define MIN_SCORE (-(WIDTH*HEIGHT)/2 + 3)
-#define MAX_SCORE ((WIDTH*HEIGHT+1)/2 - 3)
-
-
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <assert.h>
 
-// Represents the board state using bitboards
+// --- Configuration ---
+// Board dimensions
+#define WIDTH 7
+#define HEIGHT 6
+
+// --- Derived Constants ---
+#define PHEIGHT (HEIGHT + 1) // Padded height for bitboard calculations
+
+// Compile-time check for bitboard size
+#if (WIDTH * PHEIGHT > 64)
+#error "Board dimensions are too large for a 64-bit integer."
+#endif
+
+// Score bounds for the solver
+#define MIN_SCORE (-(WIDTH * HEIGHT) / 2 + 3)
+#define MAX_SCORE (((WIDTH * HEIGHT + 1) / 2) - 3)
+
+// --- Data Structures ---
+
+// Represents the board state from the perspective of the current player.
 typedef struct {
-    uint64_t current_player; // Bitmask of the current player's pieces
-    uint64_t filled;         // Bitmask of all occupied slots
-    uint8_t moves;           // Number of moves played
+    uint64_t current_position; // Bitmask of the current player's pieces
+    uint64_t mask;             // Bitmask of all occupied slots
+    int moves;                 // Number of moves played in the game
 } GameState;
 
-// Mask for the top row of a column
-static inline uint64_t top_mask(int col) {
-    return (1ULL << (HEIGHT - 1)) << col * PHEIGHT;
+
+// --- Public API ---
+
+/**
+ * @brief Initializes an empty game state.
+ * @param state Pointer to the GameState object.
+ */
+void init_gamestate(GameState* state);
+
+/**
+ * @brief Plays a move in the given column for the current player.
+ * Switches the perspective to the next player.
+ * @param state Pointer to the GameState object.
+ * @param col The 0-indexed column to play in.
+ */
+void play_move(GameState* state, int col);
+
+/**
+ * @brief Checks if a move can be made in the given column.
+ * @param state Pointer to the GameState object.
+ * @param col The 0-indexed column to check.
+ * @return True if the column is not full, false otherwise.
+ */
+bool can_play(const GameState* state, int col);
+
+/**
+ * @brief Checks if playing in the given column is a winning move for the current player.
+ * @param state Pointer to the GameState object.
+ * @param col The 0-indexed column.
+ * @return True if the move wins the game, false otherwise.
+ */
+bool is_winning_move(const GameState* state, int col);
+
+/**
+ * @brief Checks if the current player has any move that wins immediately.
+ * @param state Pointer to the GameState object.
+ * @return True if a winning move exists, false otherwise.
+ */
+bool can_win_next(const GameState* state);
+
+/**
+ * @brief Checks if the current game state is a draw.
+ * @param state Pointer to the GameState object.
+ * @return True if the state is a draw, false otherwise.
+ */
+bool is_draw(const GameState* state);
+
+/**
+ * @brief Computes a bitmask of all moves that do not result in an immediate loss.
+ * An immediate loss is a position where the opponent can win on their next turn.
+ * @param state Pointer to the GameState object.
+ * @return A bitmask of non-losing moves.
+ */
+uint64_t possible_non_losing_moves(const GameState* state);
+
+/**
+ * @brief Calculates a heuristic score for a move.
+ * The score is the number of new four-in-a-row threats created.
+ * @param state Pointer to the GameState object.
+ * @param move A bitmask representing the move to score.
+ * @return The integer score of the move.
+ */
+int move_score(const GameState* state, uint64_t move);
+
+/**
+ * @brief Converts a mask representation of a move to the column index.
+ * @param move A bitmask representing the move.
+ * @return The integer that the stone would be dropped in for that move.
+ */
+int bitboard_to_col(uint64_t move);
+
+/**
+ * @brief Generates a unique 64-bit key for the current board position.
+ * This key is used for the transposition table.
+ * @param state Pointer to the GameState object.
+ * @return The unique key.
+ */
+static inline uint64_t get_key(const GameState* state) {
+    return state->current_position + state->mask;
 }
 
-// Mask for the bottom row of a column
-static inline uint64_t bottom_mask(int col) {
-    return 1ULL << col * PHEIGHT;
-}
-
-// Mask for all rows in a column
+/**
+ * @brief Creates a bitmask for all cells in a given column.
+ * @param col The 0-indexed column.
+ * @return A bitmask for that column.
+ */
 static inline uint64_t column_mask(int col) {
-    return ((1ULL << HEIGHT) - 1) << col * PHEIGHT;
+    return ((1ULL << HEIGHT) - 1) << (col * PHEIGHT);
 }
 
-// Mask for the entire playable board area
-#define BOARD_MASK (column_mask(0) | column_mask(1) | column_mask(2) | column_mask(3) | column_mask(4) | column_mask(5) | column_mask(6))
-
-// Mask for the bottom row of the entire board
-#define BOTTOM_MASK (bottom_mask(0) | bottom_mask(1) | bottom_mask(2) | bottom_mask(3) | bottom_mask(4) | bottom_mask(5) | bottom_mask(6))
-
-// Checks if a bitboard has a four-in-a-row
-static inline bool is_win(const uint64_t pos) {
-    uint64_t m;
-
-    // Horizontal check
-    m = pos & (pos >> PHEIGHT);
-    if (m & (m >> (2 * PHEIGHT))) return true;
-
-    // Vertical check
-    m = pos & (pos >> 1);
-    if (m & (m >> 2)) return true;
-
-    // Diagonal (y = x) check
-    m = pos & (pos >> (PHEIGHT + 1));
-    if (m & (m >> (2 * (PHEIGHT + 1)))) return true;
-
-    // Diagonal (y = -x) check
-    m = pos & (pos >> (PHEIGHT - 1));
-    if (m & (m >> (2 * (PHEIGHT - 1)))) return true;
-
-    return false;
-}
-
-// Checks if the board is full
-static inline bool is_draw(const GameState* state) {
-    return state->moves == HEIGHT * WIDTH;
-}
-
-// Checks if a column is not full
-static inline bool can_play(const GameState* state, int col) {
-    return (state->filled & top_mask(col)) == 0;
-}
-
-// Places a piece and updates the state for the next player
-static inline void make_move(GameState* state, int col) {
-    assert(can_play(state, col));
-    state->current_player ^= state->filled;
-    state->filled |= state->filled + bottom_mask(col);
-    state->moves++;
-}
-
-// Checks if playing a move in a column results in a win
-static inline bool is_winning_move(const GameState* state, int col) {
-    uint64_t pos = state->current_player;
-    pos |= (state->filled + bottom_mask(col)) & column_mask(col);
-    return is_win(pos);
-}
-
-// Computes a bitmask of all squares where a player can win on the next move
-static inline uint64_t compute_winning_position(uint64_t position, uint64_t mask) {
-    // Vertical
-    uint64_t r = (position << 1) & (position << 2) & (position << 3);
-
-    // Horizontal
-    uint64_t p = (position << PHEIGHT) & (position << (2 * PHEIGHT));
-    r |= p & (position << (3 * PHEIGHT));
-    r |= p & (position >> PHEIGHT);
-    p = (position >> PHEIGHT) & (position >> (2 * PHEIGHT));
-    r |= p & (position << PHEIGHT);
-    r |= p & (position >> (3 * PHEIGHT));
-
-    // Diagonal (y = -x)
-    p = (position << (PHEIGHT - 1)) & (position << (2 * (PHEIGHT - 1)));
-    r |= p & (position << (3 * (PHEIGHT - 1)));
-    r |= p & (position >> (PHEIGHT - 1));
-    p = (position >> (PHEIGHT - 1)) & (position >> (2 * (PHEIGHT - 1)));
-    r |= p & (position << (PHEIGHT - 1));
-    r |= p & (position >> (3 * (PHEIGHT - 1)));
-
-    // Diagonal (y = x)
-    p = (position << (PHEIGHT + 1)) & (position << (2 * (PHEIGHT + 1)));
-    r |= p & (position << (3 * (PHEIGHT + 1)));
-    r |= p & (position >> (PHEIGHT + 1));
-    p = (position >> (PHEIGHT + 1)) & (position >> (2 * (PHEIGHT + 1)));
-    r |= p & (position << (PHEIGHT + 1));
-    r |= p & (position >> (3 * (PHEIGHT + 1)));
-
-    return r & (BOARD_MASK ^ mask); // Return only empty squares
-}
-
-// Returns a bitmask of all possible moves
-static inline uint64_t possible(const GameState* state) {
-    return (state->filled + BOTTOM_MASK) & BOARD_MASK;
-}
-
-// Computes the opponent's winning positions
-static inline uint64_t opponent_winning_position(const GameState* state) {
-    uint64_t opponent_player = state->filled ^ state->current_player;
-    return compute_winning_position(opponent_player, state->filled);
-}
-
-// Checks if the current player can win on their next turn
-static inline bool can_win_next(const GameState* state) {
-    uint64_t winning_moves = compute_winning_position(state->current_player, state->filled);
-    return (possible(state) & winning_moves) != 0;
-}
-
-// Returns a bitmask of moves that don't lead to an immediate loss
-static inline uint64_t possible_non_losing_moves(const GameState* state) {
-    assert(!can_win_next(state));
-    uint64_t possible_mask = possible(state);
-    uint64_t opponent_win = opponent_winning_position(state);
-    uint64_t forced_moves = possible_mask & opponent_win;
-    if (forced_moves) {
-        if (forced_moves & (forced_moves - 1)) { // If opponent has multiple threats
-            return 0; // Loss is unavoidable
-        }
-        possible_mask = forced_moves; // Must play the blocking move
-    }
-    return possible_mask & ~(opponent_win >> 1); // Avoid playing under an opponent's winning spot
-}
-
-static inline unsigned int popcount(uint64_t m) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_popcountll(m);
-// Fallback Kernighan's algorithm
-#else
-    unsigned int c = 0;
-    for (c = 0; m; c++) {
-        m &= m - 1;
-    }
-    return c;
-#endif
-}
-
-static inline int move_score(const GameState* state, int col) {
-    return popcount(compute_winning_position(state->current_player | (state->filled + bottom_mask(col)), state->filled));
-}
-
-#endif
-
-#ifdef DEBUG
-
-// Prints a raw bitboard for debugging
-void print_bitboard(uint64_t board);
-
-// Prints the game board in a human-readable format
-void print_board(const GameState* state);
-
-#endif
+#endif // BITBOARD_H
