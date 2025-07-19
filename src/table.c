@@ -5,11 +5,14 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <limits.h> // For CHAR_BIT, the number of bits in a byte
+#include <limits.h>
+#include <stdio.h>
+
+#define LIKELY(x) __builtin_expect(!!(x), 1)
 
 // --- Configuration ---
 
-// log2 of the table size. The C++ version uses 23.
+// log2 of the table size.
 #define LOG_SIZE 23
 // Number of bits in the board key.
 #define KEY_SIZE (WIDTH * PHEIGHT)
@@ -23,11 +26,6 @@ typedef uint32_t key_t;
 
 // The encoded value must fit in this type.
 typedef uint8_t value_t;
-
-// --- Compile-Time Assertions ---
-// These assertions verify that the chosen types are large enough for the
-// current configuration. If the assertions fail, the code will not compile,
-// preventing runtime errors.
 
 // Assert that key_t can hold the truncated key, which has (KEY_SIZE - LOG_SIZE) bits.
 _Static_assert(sizeof(key_t) * CHAR_BIT >= (KEY_SIZE - LOG_SIZE),
@@ -96,9 +94,33 @@ void init_table(void) {
     // Calculate the table size at runtime based on LOG_SIZE
     table_size = find_next_prime(1ULL << LOG_SIZE);
 
+#if defined(__GNUC__) || defined(__clang__)
+    // For GCC and Clang, use posix_memalign for cache-aligned memory.
+    const size_t alignment = 64;
+    if (posix_memalign((void**)&K_table, alignment, table_size * sizeof(key_t)) != 0) {
+        fprintf(stderr, "Error: posix_memalign for K_table failed.\n");
+        abort(); // Allocation failed
+    }
+    if (posix_memalign((void**)&V_table, alignment, table_size * sizeof(value_t)) != 0) {
+        fprintf(stderr, "Error: posix_memalign for V_table failed.\n");
+        free(K_table); // Clean up previously allocated memory
+        abort(); // Allocation failed
+    }
+#else
+    // For other compilers, fall back to standard malloc and check for failure.
     K_table = (key_t*)malloc(table_size * sizeof(key_t));
+    if (K_table == NULL) {
+        fprintf(stderr, "Error: malloc for K_table failed.\n");
+        abort();
+    }
+
     V_table = (value_t*)malloc(table_size * sizeof(value_t));
-    assert(K_table != NULL && V_table != NULL);
+    if (V_table == NULL) {
+        fprintf(stderr, "Error: malloc for V_table failed.\n");
+        free(K_table); // Clean up the first allocation
+        abort();
+    }
+#endif
     reset_table();
 }
 
@@ -129,7 +151,7 @@ value_t table_get(uint64_t key) {
     assert(key >> KEY_SIZE == 0);
 
     size_t pos = get_index(key);
-    if (K_table[pos] == (key_t)key) {
+    if (LIKELY(K_table[pos] == (key_t)key)) {
         return V_table[pos];
     }
     return 0; // Not found
