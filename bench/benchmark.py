@@ -67,7 +67,7 @@ def run_test_file(executable_path, test_file_path):
                 capture_output=True, text=True, check=True, timeout=TIMEOUT_SECONDS
             )
 
-            actual_score, nodes, time_us = map(int, result.stdout.strip().split())
+            _, actual_score, nodes, time_us = map(int, result.stdout.strip().split())
 
             if actual_score != expected_score:
                 print(f"\n{colors.FAIL}{'-'*10} FAIL {'-'*10}{colors.ENDC}")
