@@ -1,72 +1,63 @@
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include <time.h>
 #include <stdlib.h>
 
 #include "engine.h"
 #include "bitboard.h"
 #include "table.h"
+#include "player.h"
+#include "interface.h"
 
-// Sets up the board from a move string, returning 1 on success, 0 on error.
-static int setup_board(GameState* game, const char* move_string) {
-    init_gamestate(game);
-    reset_solver();
-    reset_table();
-
-    for (size_t i = 0; i < strlen(move_string); ++i) {
-        char move_char = move_string[i];
-        if (!isdigit(move_char) || move_char == '0') {
-            fprintf(stderr, "Error: Invalid char '%c' in position '%s'.\n", move_char, move_string);
-            return 0;
-        }
-        
-        int col = (move_char - '0') - 1; // Moves are 1-indexed in the string
-        if (col < 0 || col >= WIDTH) {
-            fprintf(stderr, "Error: Invalid column '%c' in position '%s'.\n", move_char, move_string);
-            return 0;
-        }
-        if (!can_play(game, col)) {
-            fprintf(stderr, "Error: Column %d is full for position '%s'.\n", col + 1, move_string);
-            return 0;
-        }
-        // The solver assumes the input position has no win for either player.
-        if (is_winning_move(game, col)) {
-             fprintf(stderr, "Error: Position '%s' contains a winning move, which is not supported.\n", move_string);
-             return 0;
-        }
-        play_move(game, col);
-    }
-    return 1;
+PlayerType parse_player_type(const char* arg) {
+    if (strcmp(arg, "ai") == 0) return PLAYER_TYPE_AI;
+    return PLAYER_TYPE_HUMAN; // Default to human
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <move_string>\n", argv[0]);
-        return 1;
+    if (argc != 3 && argc != 1) {
+        fprintf(stderr, "Usage: %s [human|ai] [human|ai]\n", argv[0]);
+        fprintf(stderr, "Defaulting to: human ai\n");
     }
 
-    // Initialize solver modules
     init_solver();
     init_table();
 
+    Player p1 = { .type = (argc == 3) ? parse_player_type(argv[1]) : PLAYER_TYPE_HUMAN, .symbol = 'O' };
+    Player p2 = { .type = (argc == 3) ? parse_player_type(argv[2]) : PLAYER_TYPE_AI, .symbol = 'X' };
+    Player* current_player = &p1;
+
     GameState game;
-    if (!setup_board(&game, argv[1])) {
-        free_table(); // Clean up on error
-        return 1;
+    init_gamestate(&game);
+
+    while (game.moves < WIDTH * HEIGHT) {
+        draw_board(&game, &p1, &p2);
+        printf("Player %c's turn (%s).\n", current_player->symbol, current_player->type == PLAYER_TYPE_AI ? "AI" : "Human");
+
+        int move = get_player_move(current_player, &game);
+        if (move < 0) {
+            printf("Player %c has no moves and forfeits.\n", current_player->symbol);
+            break;
+        }
+
+        if (is_winning_move(&game, move)) {
+            play_move(&game, move);
+            draw_board(&game, &p1, &p2);
+            announce_result(current_player);
+            free_table();
+            return 0;
+        }
+
+        play_move(&game, move);
+
+        // Switch to the next player
+        current_player = (current_player == &p1) ? &p2 : &p1;
     }
-    
-    clock_t start = clock();
-    int score = solve(&game, false);
-    clock_t end = clock();
 
-    double time_sec = ((double)(end - start)) / CLOCKS_PER_SEC;
+    if (game.moves == WIDTH * HEIGHT) {
+        draw_board(&game, &p1, &p2);
+        announce_result(NULL); // It's a draw
+    }
 
-    // Output format: score nodes_searched time_microseconds
-    fprintf(stdout, "%d %llu %lld\n", score, (unsigned long long)g_nodes_searched, (long long)(time_sec * 1e6));
-
-    // Clean up resources
     free_table();
-
     return 0;
 }
