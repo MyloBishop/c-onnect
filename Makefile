@@ -1,51 +1,37 @@
 CC = gcc
 LDFLAGS = -lm
 
-SRCDIR   = src
-OBJDIR   = obj
-BINDIR   = bin
-BENCHDIR = bench
+SRCDIR = src
+OBJDIR = obj
+BINDIR = bin
 
-SOURCES = $(wildcard $(SRCDIR)/*.c)
+EXEC_GAME = $(BINDIR)/game
+EXEC_SOLVER = $(BINDIR)/solver
 
-EXEC_RELEASE = $(BINDIR)/solver
-EXEC_DEBUG   = $(BINDIR)/debug
+CFLAGS = -Iinclude -Wall -Wextra -Wshadow -O3 -march=native -DNDEBUG
 
-OBJECTS_RELEASE = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/release/%.o, $(SOURCES))
-OBJECTS_DEBUG   = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/debug/%.o, $(SOURCES))
+ALL_C_SOURCES = $(wildcard $(SRCDIR)/*.c)
+GAME_SOURCES = $(filter-out $(SRCDIR)/solver.c $(SRCDIR)/book_builder.c, $(ALL_C_SOURCES))
+SOLVER_SOURCES = $(filter-out $(SRCDIR)/game.c $(SRCDIR)/book_builder.c, $(ALL_C_SOURCES))
 
-COMMON_FLAGS = -Iinclude -Wall -Wextra -Wshadow -Wformat=2
-RELEASE_CFLAGS = -O3 -march=native -DNDEBUG
-DEBUG_CFLAGS = -g -Werror -Wpedantic -gdwarf-4 -DDEBUG
+GAME_OBJECTS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(GAME_SOURCES))
+SOLVER_OBJECTS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SOLVER_SOURCES))
 
-.PHONY: all release debug clean test bench
+.PHONY: all clean
 
-all: release
+all: $(EXEC_GAME) $(EXEC_SOLVER)
 
-release: $(EXEC_RELEASE)
-debug: $(EXEC_DEBUG)
+$(EXEC_GAME): $(GAME_OBJECTS)
+	@mkdir -p $(BINDIR)
+	$(CC) $^ -o $@ $(LDFLAGS)
 
-$(EXEC_RELEASE): $(OBJECTS_RELEASE)
-	mkdir -p $(BINDIR)
-	$(CC) $(OBJECTS_RELEASE) -o $@ $(LDFLAGS)
+$(EXEC_SOLVER): $(SOLVER_OBJECTS)
+	@mkdir -p $(BINDIR)
+	$(CC) $^ -o $@ $(LDFLAGS)
 
-$(EXEC_DEBUG): $(OBJECTS_DEBUG)
-	mkdir -p $(BINDIR)
-	$(CC) $(OBJECTS_DEBUG) -o $@ $(LDFLAGS)
-
-$(OBJDIR)/release/%.o: $(SRCDIR)/%.c
-	mkdir -p $(OBJDIR)/release
-	$(CC) $(CFLAGS) $(COMMON_FLAGS) $(RELEASE_CFLAGS) -c $< -o $@
-
-$(OBJDIR)/debug/%.o: $(SRCDIR)/%.c
-	mkdir -p $(OBJDIR)/debug
-	$(CC) $(CFLAGS) $(COMMON_FLAGS) $(DEBUG_CFLAGS) -c $< -o $@
-
-test: debug
-	python3 $(BENCHDIR)/benchmark.py $(EXEC_DEBUG)
-
-bench: release
-	python3 $(BENCHDIR)/benchmark.py $(EXEC_RELEASE)
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJDIR) $(BINDIR)
+	rm -rf $(OBJDIR) $(BINDIR) book.bin

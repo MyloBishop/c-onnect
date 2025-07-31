@@ -26,4 +26,8 @@ void reset_solver(void);
  */
 int solve(const GameState* state, bool weak);
 
+
+int find_best_move(const GameState* state);
+
+
 #endif // ENGINE_H

@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
         free_table(); // Clean up on error
         return 1;
     }
+
+    uint64_t key = get_key(&game);
     
     clock_t start = clock();
     int score = solve(&game, false);
@@ -63,7 +65,7 @@ int main(int argc, char *argv[]) {
     double time_sec = ((double)(end - start)) / CLOCKS_PER_SEC;
 
     // Output format: score nodes_searched time_microseconds
-    fprintf(stdout, "%d %llu %lld\n", score, (unsigned long long)g_nodes_searched, (long long)(time_sec * 1e6));
+    fprintf(stdout, "%llu %d %llu %lld\n", key, score, (unsigned long long)g_nodes_searched, (long long)(time_sec * 1e6));
 
     // Clean up resources
     free_table();

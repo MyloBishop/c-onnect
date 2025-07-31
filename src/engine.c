@@ -3,6 +3,7 @@
 #include "ordering.h"
 
 #include <assert.h>
+#include <limits.h>
 
 // --- Engine State ---
 
@@ -167,4 +168,41 @@ int solve(const GameState* state, bool weak) {
         }
     }
     return min;
+}
+
+int find_best_move(const GameState* state) {
+    int best_move = -1;
+    int best_score = INT_MIN;
+
+    // Get all possible non-losing moves.
+    uint64_t moves = possible_non_losing_moves(state);
+    if (moves == 0) { // If all moves lead to a loss, find any valid move.
+        // This is a fallback, in a solved game this branch should not be hit
+        // unless the game is already lost.
+        for (int col = 0; col < WIDTH; ++col) {
+            if (can_play(state, col)) {
+                moves |= column_mask(col);
+            }
+        }
+    }
+
+    // Iterate through each column to find potential moves
+    for (int col = 0; col < WIDTH; ++col) {
+        uint64_t move = moves & column_mask(col);
+        if (move) {
+            // Create a copy of the state to simulate the move
+            GameState next_state = *state;
+            play_move(&next_state, col);
+
+            // The score is negated because negamax returns the score from the opponent's perspective.
+            int score = -solve(&next_state, false);
+
+            // If this move is better than any found so far, update the best move.
+            if (score > best_score) {
+                best_score = score;
+                best_move = col;
+            }
+        }
+    }
+    return best_move;
 }
