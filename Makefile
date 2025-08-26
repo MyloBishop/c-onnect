@@ -29,7 +29,7 @@ GAME_OBJECTS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(GAME_SOURCES))
 SOLVER_OBJECTS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SOLVER_SOURCES))
 
 
-.PHONY: all clean debug release
+.PHONY: all clean debug release book
 
 all: $(EXEC_GAME) $(EXEC_SOLVER)
 
@@ -39,6 +39,12 @@ release:
 	@$(MAKE) clean
 	@echo "--- Building in RELEASE mode ---"
 	@$(MAKE) all CFLAGS_TYPE=RELEASE
+
+book:
+	@$(MAKE) clean
+	@$(MAKE) $(EXEC_SOLVER) CFLAGS_TYPE=RELEASE
+	@echo "--- Generating Opening Book ---"
+	@python3 generate_book.py
 
 $(EXEC_GAME): $(GAME_OBJECTS)
 	@mkdir -p $(BINDIR)
@@ -54,4 +60,4 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	@rm -rf $(OBJDIR) $(BINDIR) book.bin
+	@rm -rf $(OBJDIR) $(BINDIR)
