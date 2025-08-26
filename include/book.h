@@ -8,7 +8,7 @@
 typedef __uint128_t uint128_t;
 
 // The book will be used for positions with fewer moves than this value.
-#define MAX_BOOK_DEPTH 2
+#define MAX_BOOK_DEPTH 7
 
 /**
  * @brief Initializes the opening book by loading it from a file.

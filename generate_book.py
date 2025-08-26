@@ -9,7 +9,7 @@ from tqdm import tqdm
 # --- Configuration ---
 SOLVER_PATH = os.path.join("bin", "solver")
 BOOK_FILE_PATH = "book.bin"
-MAX_DEPTH = 2
+MAX_DEPTH = 7
 WIDTH = 7
 HEIGHT = 6
 SOLVER_TIMEOUT = 300
