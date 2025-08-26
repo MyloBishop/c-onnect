@@ -121,4 +121,11 @@ static inline uint64_t column_mask(int col) {
     return ((1ULL << HEIGHT) - 1) << (col * PHEIGHT);
 }
 
+/**
+ * @brief Generates a mask of the playable positions on the board.
+ * @param state Pointer to the GameState object.
+ * @return A bitmask of the possible positions.
+ */
+uint64_t possible(const GameState* state);
+
 #endif // BITBOARD_H

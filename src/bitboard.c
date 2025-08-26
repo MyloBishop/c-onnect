@@ -17,30 +17,25 @@ static uint64_t bottom_mask_for_col(int col) {
     return 1ULL << (col * PHEIGHT);
 }
 
-// Returns a bitmask of all possible moves.
-static uint64_t possible(const GameState* state) {
-    return (state->mask + BOTTOM_MASK) & BOARD_MASK;
-}
-
 // Counts the number of set bits in a bitmask (population count).
 static unsigned int popcount(uint64_t m) {
-// Use a fast compiler intrinsic if available.
-#if defined(__GNUC__) || defined(__clang__)
+    // Use a fast compiler intrinsic if available.
+    #if defined(__GNUC__) || defined(__clang__)
     return __builtin_popcountll(m);
-#else
+    #else
     unsigned int c = 0;
     for (c = 0; m; c++) {
         m &= m - 1; // Brian Kernighan's algorithm.
     }
     return c;
-#endif
+    #endif
 }
 
 // Computes a bitmask of all positions where the given player can win on the next move.
 static uint64_t compute_winning_position(uint64_t position, uint64_t mask) {
     // Vertical check
     uint64_t r = (position << 1) & (position << 2) & (position << 3);
-
+    
     // Horizontal check
     uint64_t p = (position << PHEIGHT) & (position << (2 * PHEIGHT));
     r |= p & (position << (3 * PHEIGHT));
@@ -48,7 +43,7 @@ static uint64_t compute_winning_position(uint64_t position, uint64_t mask) {
     p = (position >> PHEIGHT) & (position >> (2 * PHEIGHT));
     r |= p & (position << PHEIGHT);
     r |= p & (position >> (3 * PHEIGHT));
-
+    
     // Diagonal (y = -x) check
     p = (position << (PHEIGHT - 1)) & (position << (2 * (PHEIGHT - 1)));
     r |= p & (position << (3 * (PHEIGHT - 1)));
@@ -56,7 +51,7 @@ static uint64_t compute_winning_position(uint64_t position, uint64_t mask) {
     p = (position >> (PHEIGHT - 1)) & (position >> (2 * (PHEIGHT - 1)));
     r |= p & (position << (PHEIGHT - 1));
     r |= p & (position >> (3 * (PHEIGHT - 1)));
-
+    
     // Diagonal (y = x) check
     p = (position << (PHEIGHT + 1)) & (position << (2 * (PHEIGHT + 1)));
     r |= p & (position << (3 * (PHEIGHT + 1)));
@@ -64,7 +59,7 @@ static uint64_t compute_winning_position(uint64_t position, uint64_t mask) {
     p = (position >> (PHEIGHT + 1)) & (position >> (2 * (PHEIGHT + 1)));
     r |= p & (position << (PHEIGHT + 1));
     r |= p & (position >> (3 * (PHEIGHT + 1)));
-
+    
     return r & (BOARD_MASK ^ mask); // Exclude spots that are already occupied.
 }
 
@@ -80,17 +75,17 @@ static uint64_t winning_position(const GameState* state) {
 
 // Gets the index of the least significant set bit (LSB).
 static inline int count_trailing_zeros(uint64_t n) {
-// Use a fast compiler intrinsic if available.
-#if defined(__GNUC__) || defined(__clang__)
+    // Use a fast compiler intrinsic if available.
+    #if defined(__GNUC__) || defined(__clang__)
     return __builtin_ctzll(n);
-#else
+    #else
     int count = 0;
     while ((n & 1) == 0) {
         n >>= 1;
         count++;
     }
     return count;
-#endif
+    #endif
 }
 
 // Initializes a GameState struct to an empty board.
@@ -106,7 +101,7 @@ void play_move(GameState* state, int col) {
     assert(state != NULL);
     assert(col >= 0 && col < WIDTH);
     assert(can_play(state, col));
-
+    
     uint64_t move = (state->mask + bottom_mask_for_col(col)) & column_mask(col);
     state->current_position ^= state->mask; // Pass turn to opponent.
     state->mask |= move;                    // Add the new stone to the board.
@@ -131,19 +126,19 @@ bool is_winning_move(const GameState* state, int col) {
     // Horizontal check
     uint64_t horizontal_win = pos & (pos >> PHEIGHT);
     if ((horizontal_win & (horizontal_win >> (2 * PHEIGHT))) != 0) return true;
-
+    
     // Vertical check
     uint64_t vertical_win = pos & (pos >> 1);
     if ((vertical_win & (vertical_win >> 2)) != 0) return true;
-
+    
     // Diagonal (y = x) check
     uint64_t diag1_win = pos & (pos >> (PHEIGHT + 1));
     if ((diag1_win & (diag1_win >> (2 * (PHEIGHT + 1)))) != 0) return true;
-
+    
     // Diagonal (y = -x) check
     uint64_t diag2_win = pos & (pos >> (PHEIGHT - 1));
     if ((diag2_win & (diag2_win >> (2 * (PHEIGHT - 1)))) != 0) return true;
-
+    
     return false;
 }
 
@@ -187,4 +182,9 @@ int move_score(const GameState* state, uint64_t move) {
 // Converts a bitboard move (a single set bit) to a column index.
 int bitboard_to_col(uint64_t move) {
     return count_trailing_zeros(move) / PHEIGHT;
+}
+
+// Returns a bitmask of all possible moves.
+uint64_t possible(const GameState* state) {
+    return (state->mask + BOTTOM_MASK) & BOARD_MASK;
 }
