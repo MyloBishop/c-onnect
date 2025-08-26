@@ -22,7 +22,7 @@ static int setup_board(GameState* game, const char* move_string) {
             return 0;
         }
         
-        int col = (move_char - '0') - 1; // Moves are 1-indexed in the string
+        int col = (move_char - '0') - 1; // Moves are 1-indexed in the string.
         if (col < 0 || col >= WIDTH) {
             fprintf(stderr, "Error: Invalid column '%c' in position '%s'.\n", move_char, move_string);
             return 0;
@@ -47,22 +47,18 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Initialize solver modules
+    // Initialize solver modules.
     init_solver();
     init_table();
     init_book();
 
     GameState game;
     if (!setup_board(&game, argv[1])) {
-        // Clean up on error
+        // Clean up on error.
         free_table();
         free_book();
         return 1;
     }
-
-    // Get the raw bitboard components for the book generator
-    uint64_t current_pos = game.current_position;
-    uint64_t mask = game.mask;
     
     clock_t start = clock();
     int score = solve(&game, false);
@@ -70,15 +66,15 @@ int main(int argc, char *argv[]) {
 
     double time_sec = ((double)(end - start)) / CLOCKS_PER_SEC;
 
-    // Modified output format: current_pos mask score nodes_searched time_microseconds
+    // Output results in a machine-readable format for analysis.
     fprintf(stdout, "%llu %llu %d %llu %lld\n",
-            (unsigned long long)current_pos,
-            (unsigned long long)mask,
+            (unsigned long long)game.current_position,
+            (unsigned long long)game.mask,
             score,
             (unsigned long long)g_nodes_searched,
             (long long)(time_sec * 1e6));
 
-    // Clean up resources
+    // Clean up resources.
     free_table();
     free_book();
 

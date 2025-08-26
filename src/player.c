@@ -1,17 +1,17 @@
 #include "player.h"
 #include <stdio.h>
 
-// A private helper function to get input from a human.
+// Prompts a human player for input and validates the move.
 static int get_human_move(const GameState* game) {
     int col = -1;
     while (1) {
         printf("Enter your move (1-7): ");
         char buffer[10];
         if (fgets(buffer, sizeof(buffer), stdin)) {
-            // Safely parse integer from buffer
+            // Safely parse integer from the input buffer.
             if (sscanf(buffer, "%d", &col) == 1 && col >= 1 && col <= WIDTH) {
                 if (can_play(game, col - 1)) {
-                    return col - 1; // Return 0-indexed column
+                    return col - 1; // Return 0-indexed column.
                 } else {
                     printf("Error: Column %d is full.\n", col);
                 }
@@ -22,7 +22,7 @@ static int get_human_move(const GameState* game) {
     }
 }
 
-// The public function that dispatches to the correct move-getter.
+// Gets a move for the specified player (human or AI).
 int get_player_move(const Player* player, const GameState* game) {
     switch (player->type) {
         case PLAYER_TYPE_AI:

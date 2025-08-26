@@ -1,6 +1,7 @@
 #include "interface.h"
 #include <stdio.h>
 
+// Draws the current state of the game board to the console.
 void draw_board(const GameState* state, const Player* p1, const Player* p2) {
     printf("\n");
     for (int r = HEIGHT - 1; r >= 0; r--) {
@@ -10,13 +11,11 @@ void draw_board(const GameState* state, const Player* p1, const Player* p2) {
             if (!(state->mask & pos)) {
                 printf(". ");
             } else {
-                // Determine if the piece belongs to the current player ('X') or the other ('O')
-                // This logic correctly displays the board from a neutral perspective.
+                // Determine which player's piece is on the square.
                 bool is_current_player_piece = (state->current_position & pos) != 0;
-                // If an even number of moves have been played, the first player ('O') is the "current" one in the state
-                if ((state->moves % 2) == 0) {
+                if ((state->moves % 2) == 0) { // Player 1 just moved.
                      printf("%c ", is_current_player_piece ? p1->symbol : p2->symbol);
-                } else { // otherwise the second player ('X') is
+                } else { // Player 2 just moved.
                      printf("%c ", is_current_player_piece ? p2->symbol : p1->symbol);
                 }
             }
@@ -27,6 +26,7 @@ void draw_board(const GameState* state, const Player* p1, const Player* p2) {
 }
 
 
+// Announces the winner of the game or if it's a draw.
 void announce_result(const Player* winner) {
     if (winner) {
         printf("Game over! Player %c wins!\n", winner->symbol);

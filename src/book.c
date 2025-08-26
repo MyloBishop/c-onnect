@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
-// --- Book Data Structure ---
-
+// Represents a single entry in the opening book, mapping a board state to a move.
+// The struct is packed to minimize memory usage when loading the book file.
 typedef struct {
     uint128_t key;
     uint8_t move;
@@ -13,8 +13,7 @@ typedef struct {
 static BookEntry* g_book_entries = NULL;
 static size_t g_book_size = 0;
 
-// --- Public API Implementations ---
-
+// Loads the opening book from "book.bin" into memory.
 void init_book(void) {
     const char* book_filename = "book.bin";
     FILE* file = fopen(book_filename, "rb");
@@ -32,6 +31,7 @@ void init_book(void) {
         return;
     }
     
+    // The file size must be a multiple of the entry size.
     assert(file_size % sizeof(BookEntry) == 0);
 
     g_book_size = file_size / sizeof(BookEntry);
@@ -68,6 +68,7 @@ void init_book(void) {
     fclose(file);
 }
 
+// Frees the memory allocated for the opening book.
 void free_book(void) {
     if (g_book_entries) {
         free(g_book_entries);
@@ -76,10 +77,12 @@ void free_book(void) {
     }
 }
 
+// Computes a unique 128-bit key from the current game state's bitboards.
 uint128_t book_compute_key(const GameState* state) {
     return ((uint128_t)state->mask << 64) | state->current_position;
 }
 
+// Searches the opening book for a move corresponding to the given key.
 bool book_get_move(uint128_t key, int* move) {
     assert(move != NULL);
 
