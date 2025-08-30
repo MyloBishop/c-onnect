@@ -102,16 +102,7 @@ The easiest way to run the benchmark suite is with the Makefile command. It will
 
 `make bench`
 
----
-## Customizing the Opening Book
-
-You can generate your own opening book with a different depth.
-
-1.  Open the file `generate_book.py`.
-2.  Change the value of the `MAX_DEPTH` constant at the top of the file to your desired depth.
-3.  Run `make book` from your terminal.
-
-This will regenerate the `book.bin` file with optimal moves up to the new depth you specified. Be aware that increasing the depth significantly increases the generation time.
+This runs [Pascal Pons' benchmarking suite](http://blog.gamesolver.org/solving-connect-four/02-test-protocol), [compare the results](https://github.com/PascalPons/connect4)!
 
 ---
 ## Core API Components
